@@ -1,0 +1,49 @@
+body, * { font-family: 'Vazirmatn', sans-serif !important; }
+  
+  /* ستایلی شووشەی تاریکی مۆدێرن (Dark Glassmorphism App Feel) */
+  .app-glass {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .app-glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .app-bottom-bar {
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  /* چوارچێوەی سکانەری لێزەری کامێرا */
+  @keyframes scanBeam {
+    0%, 100% { top: 5%; opacity: 0.7; }
+    50% { top: 92%; opacity: 1; }
+  }
+  .scanner-laser-beam {
+    position: absolute;
+    left: 4%;
+    right: 4%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #22c55e, #86efac, #22c55e, transparent);
+    box-shadow: 0 0 14px #22c55e, 0 0 24px #4ade80;
+    animation: scanBeam 2.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* سەلامەتی شاشەی مۆبایل (Safe Area Insets) */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 10px);
+  }
+
+  /* شاردنەوەی سکڕۆڵ بار */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

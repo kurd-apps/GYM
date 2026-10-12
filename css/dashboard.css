@@ -1,0 +1,20 @@
+body, * { font-family: 'Vazirmatn', sans-serif !important; }
+  .glass { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(16px); border: 1px solid rgba(226, 232, 240, 0.85); }
+  .view { display: none; }
+  .view.active { display: block; }
+  .subview { display: none; }
+  .subview.active { display: block; }
+  .sortable-ghost { opacity: 0.35; transform: scale(0.97); }
+  .sortable-chosen { box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.3); border-color: #4f46e5; }
+  .sidebar-collapsed { width: 5.5rem !important; padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+  .sidebar-collapsed .sidebar-header { justify-content: center !important; flex-direction: column !important; gap: 0.5rem !important; }
+  .sidebar-collapsed .sidebar-header-brand { justify-content: center !important; width: 100% !important; margin: 0 auto !important; }
+  .sidebar-collapsed .sidebar-text { display: none !important; }
+  .sidebar-collapsed .nav-btn { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+  .content-expanded { margin-right: 5.5rem !important; }
+  html[dir="ltr"] .content-expanded { margin-left: 5.5rem !important; margin-right: 0 !important; }
+  html[dir="ltr"] #adminSidebar { left: 0 !important; right: auto !important; }
+  html[dir="ltr"] #mainContent { margin-left: 18rem; margin-right: 0; }
+  @media (max-width: 1023px) {
+    html[dir="ltr"] #mainContent { margin-left: 0 !important; margin-right: 0 !important; }
+  }

@@ -1,0 +1,31 @@
+body, * { font-family: 'Vazirmatn', sans-serif !important; }
+  
+  /* ستایلی شوشەی بلور و نیوەڕوون - دواوەی بە حاڵ دیاربێت (Frosted Blur Glassmorphism) */
+  .kiosk-frosted-glass {
+    background: rgba(15, 23, 42, 0.42);
+    backdrop-filter: blur(28px) saturate(190%);
+    -webkit-backdrop-filter: blur(28px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 30px 80px -15px rgba(0, 0, 0, 0.75),
+                inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  }
+
+  .kiosk-glass-subtle {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .bg-custom-cover {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+  }
+
+
+
+  /* پێشکەشکردن لەسەر شاشەی دووەم */
+  .display-mode header { padding-top: 1rem; }
+  .display-mode #dualScreenBtn { display: none; }
