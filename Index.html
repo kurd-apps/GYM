@@ -1,0 +1,1892 @@
+<!doctype html>
+<html lang="ku" dir="rtl" id="appHtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title id="adminAppTitle">Gym Pro — سیستەمی پێشکەوتووی بەڕێوەبردنی هۆڵ</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+<!-- بەشی لۆگین بۆ داشبۆردی بەڕێوەبەرایەتی و ستاف -->
+<div id="loginView" class="min-h-screen grid place-items-center p-4 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-slate-800">
+  <div class="bg-white/95 backdrop-blur-xl w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl border border-white/20">
+    <div class="w-16 h-16 rounded-2xl bg-indigo-600 text-white grid place-items-center mx-auto shadow-lg shadow-indigo-600/30">
+      <i data-lucide="shield-check" class="w-8 h-8"></i>
+    </div>
+    <h1 class="text-2xl font-black text-center mt-5 text-slate-900" id="lblLoginTitle">چوونەژوورەوەی ستاف</h1>
+    <p class="text-center text-slate-500 mt-1.5 text-xs font-medium" id="lblLoginSub">سیستەمی بەڕێوەبردنی هۆڵ و ژمێریاری</p>
+
+    <form onsubmit="handleAdminLogin(event)" class="mt-6 space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1" id="lblLoginUser">ناوی بەکارهێنەر (Username)</label>
+        <input id="loginUsername" required class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="بۆ نموونە: admin">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1" id="lblLoginPass">وشەی نهێنی (Password)</label>
+        <input id="loginPassword" type="password" required class="w-full border border-slate-200 rounded-2xl p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="••••••••">
+      </div>
+      <p id="loginError" class="text-rose-600 text-xs font-bold text-center"></p>
+      <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl p-4 shadow-lg shadow-indigo-600/25 transition" id="btnLoginSubmit">
+        چوونەژوورەوە بۆ داشبۆرد
+      </button>
+    </form>
+
+    <!-- هەژمارە تاقیکارییەکان -->
+    <div class="mt-6 pt-5 border-t border-slate-200/80">
+      <span class="block text-xs font-semibold text-slate-400 text-center mb-2" id="lblLoginDemo">هەژمارە ئامادەکراوەکان:</span>
+      <div class="flex flex-wrap gap-2 justify-center">
+        <button type="button" onclick="fillAdminLogin('admin', 'admin')" class="px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100">admin (بەڕێوەبەر)</button>
+        <button type="button" onclick="fillAdminLogin('soran', '123')" class="px-2.5 py-1 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold hover:bg-purple-100">soran (ڕاهێنەر)</button>
+        <button type="button" onclick="fillAdminLogin('lana', '123')" class="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold hover:bg-emerald-100">lana (ڕیسێپشن)</button>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-100 text-center">
+        <button type="button" onclick="configureApiUrl()" class="text-[11px] text-slate-400 hover:text-indigo-600 font-semibold inline-flex items-center justify-center gap-1.5 transition">
+          <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+          <span>ڕێکخستنی بەستەری داتابەیس (API Settings)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="hidden min-h-screen">
+
+<!-- لاپەڕەی تەنیشت (Sidebar) -->
+<aside id="adminSidebar" class="fixed inset-y-0 right-0 w-72 bg-slate-950 text-white p-5 hidden lg:flex flex-col z-40 shadow-xl transition-all duration-300">
+  <div class="sidebar-header flex items-center justify-between mb-7">
+    <div class="sidebar-header-brand flex items-center gap-3 overflow-hidden">
+      <div class="w-11 h-11 rounded-2xl bg-indigo-600 grid place-items-center shadow-lg shadow-indigo-600/30 shrink-0">
+        <i data-lucide="dumbbell" class="w-6 h-6"></i>
+      </div>
+      <div class="sidebar-text truncate">
+        <b class="text-lg tracking-wide block truncate" id="sidebarGymName">Smart Gym Pro</b>
+        <div class="text-[11px] text-slate-400 truncate" id="sidebarGymSubText">سیستەمی هۆڵ (Excel Database)</div>
+      </div>
+    </div>
+    <button onclick="toggleSidebarMini()" class="p-1.5 rounded-xl hover:bg-white/10 text-slate-400 hover:text-white transition shrink-0" title="بچووککردنەوە/گەورەکردنی سایدبار">
+      <i data-lucide="panel-right-close" id="sidebarCollapseIcon" class="w-4 h-4"></i>
+    </button>
+  </div>
+
+  <nav class="space-y-1.5 flex-1 overflow-y-auto pr-1">
+    <button onclick="show('dashboard')" class="nav nav-btn w-full p-3 rounded-xl text-right flex items-center gap-3 hover:bg-white/10 transition" data-v="dashboard" title="داشبۆرد">
+      <i data-lucide="layout-dashboard" class="w-5 h-5 shrink-0"></i>
+      <span class="sidebar-text" id="navDashboardText">داشبۆرد</span>
+    </button>
+    <button onclick="show('members')" class="nav nav-btn w-full p-3 rounded-xl text-right flex items-center gap-3 hover:bg-white/10 transition" data-v="members" title="بەشداربووان">
+      <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
+      <span class="sidebar-text" id="navMembersText">بەشداربووان</span>
+    </button>
+    <button onclick="show('plans')" class="nav nav-btn w-full p-3 rounded-xl text-right flex items-center gap-3 hover:bg-white/10 transition" data-v="plans" title="پلانەکانی ڕاهێنان و خۆراک">
+      <i data-lucide="clipboard-list" class="w-5 h-5 shrink-0"></i>
+      <span class="sidebar-text" id="navPlansText">پلان و خۆراک</span>
+    </button>
+    <button onclick="show('finances')" class="nav nav-btn w-full p-3 rounded-xl text-right flex items-center gap-3 hover:bg-white/10 transition" data-v="finances" title="داهات و خەرجی">
+      <i data-lucide="wallet" class="w-5 h-5 shrink-0"></i>
+      <span class="sidebar-text" id="navFinancesText">داهات و خەرجی</span>
+    </button>
+    <button onclick="show('store')" class="nav nav-btn w-full p-3 rounded-xl text-right flex items-center gap-3 hover:bg-white/10 transition" data-v="store" title="فرۆشگا و POS">
+      <i data-lucide="shopping-bag" class="w-5 h-5 shrink-0"></i>
+      <span class="sidebar-text" id="navStoreText">فرۆشگا و POS</span>
+    </button>
+    <!-- بەشی ستاف -->
+    <button onclick="show('staff')" class="nav nav-btn w-full p-3 rounded-xl text-right flex items-center gap-3 hover:bg-white/10 transition" data-v="staff" title="ستاف و کارمەندان">
+      <i data-lucide="badge-check" class="w-5 h-5 shrink-0"></i>
+      <span class="sidebar-text" id="navStaffText">ستاف و کارمەندان</span>
+    </button>
+    <!-- بەشی ئاگادارییەکان -->
+    <button onclick="show('notifications')" class="nav nav-btn w-full p-3 rounded-xl text-right flex items-center gap-3 hover:bg-white/10 transition" data-v="notifications" title="ئاگادارییەکان">
+      <i data-lucide="bell" class="w-5 h-5 shrink-0"></i>
+      <span class="sidebar-text" id="navNotificationsText">ئاگادارییەکان</span>
+    </button>
+    <!-- کیۆسک و پەڕەی چێک ئین -->
+    <a href="/kiosk" target="_blank" class="nav-btn w-full p-3 rounded-xl text-right flex items-center gap-3 hover:bg-white/10 text-slate-300 hover:text-white transition" title="پەڕەی چێک ئین (Check-in Page)">
+      <i data-lucide="scan" class="w-5 h-5 shrink-0 text-indigo-400"></i>
+      <span class="sidebar-text" id="navCheckinPageText">پەڕەی چێک ئین</span>
+    </a>
+    <!-- پۆڕتاڵی یاریزان لە ناو سایدبار -->
+    <a href="/member" target="_blank" class="nav-btn w-full p-3 rounded-xl text-right flex items-center gap-3 hover:bg-white/10 text-slate-300 hover:text-white transition" title="پۆڕتاڵی یاریزان (Member Portal)">
+      <i data-lucide="user-check" class="w-5 h-5 shrink-0 text-purple-400"></i>
+      <span class="sidebar-text" id="navMemberPortalText">پۆڕتاڵی یاریزان</span>
+    </a>
+    <button onclick="show('settings')" class="nav nav-btn w-full p-3 rounded-xl text-right flex items-center gap-3 hover:bg-white/10 transition" data-v="settings" title="ڕێکخستنەکان و باکئەپ">
+      <i data-lucide="settings" class="w-5 h-5 shrink-0"></i>
+      <span class="sidebar-text" id="navSettingsText">ڕێکخستنەکان</span>
+    </button>
+  </nav>
+
+  <!-- دوگمەی چوونەدەرەوە لە خوارەوەی سایدبار (بەپێی داواکاری) -->
+  <div class="pt-3 border-t border-slate-800">
+    <button onclick="adminLogout()" class="w-full flex items-center justify-center gap-2.5 p-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 text-xs font-bold transition border border-rose-500/20" title="چوونەدەرەوە">
+      <i data-lucide="log-out" class="w-5 h-5 shrink-0"></i>
+      <span class="sidebar-text" id="navLogoutText">چوونەدەرەوە</span>
+    </button>
+  </div>
+</aside>
+
+<!-- بەشی سەرەکی ناوەڕۆک -->
+<main id="mainContent" class="lg:mr-72 p-4 md:p-7 transition-all duration-300">
+  <header class="flex flex-wrap items-center justify-between gap-4 mb-7">
+    <div>
+      <h1 id="pageTitle" class="text-2xl font-extrabold text-slate-900">داشبۆرد</h1>
+      <p class="text-sm text-slate-500" id="pageSubTitle">بەڕێوەبردنی هۆڵ، داهات، فرۆشگا، ستاف و ئاگادارییەکان</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- هەژماری کارمەندی چالاک -->
+      <div class="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white font-black grid place-items-center text-xs" id="headerUserAvatar">
+          A
+        </div>
+        <div class="text-right">
+          <b class="block text-xs text-slate-900 leading-tight" id="headerUserName">بەڕێوەبەر</b>
+          <span class="block text-[10px] text-indigo-600 font-bold leading-none" id="headerUserRole">ئەدمین</span>
+        </div>
+      </div>
+
+      <button onclick="loadAll()" title="نوێکردنەوە" class="p-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 shadow-sm border border-slate-200 transition">
+        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ١. داشبۆرد (ئابوونەی چالاک لابراوە، داهاتی ڕۆژانە زیادکراوە) -->
+  <section id="dashboard" class="view active space-y-5">
+    <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div class="glass rounded-3xl p-5 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-slate-500 font-bold" id="lblKpiMembers">کۆی بەشداربووان</span>
+          <span class="p-2 rounded-xl bg-indigo-50 text-indigo-600"><i data-lucide="users" class="w-5 h-5"></i></span>
+        </div>
+        <div id="kMembers" class="text-3xl font-extrabold mt-3 text-slate-900">—</div>
+      </div>
+
+      <!-- داهاتی ئەمڕۆ (داهاتی ڕۆژانە) -->
+      <div class="glass rounded-3xl p-5 shadow-sm border-2 border-emerald-300 bg-emerald-50/20">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-emerald-700 font-extrabold flex items-center gap-1" id="lblKpiTodayRev">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            داهاتی ئەمڕۆ (ڕۆژانە)
+          </span>
+          <span class="p-2 rounded-xl bg-emerald-100 text-emerald-700"><i data-lucide="coins" class="w-5 h-5"></i></span>
+        </div>
+        <div id="kTodayRevenue" class="text-2xl font-black mt-3 text-emerald-700">0 IQD</div>
+        <div class="text-[11px] text-slate-500 mt-1 flex justify-between">
+          <span><span id="lblKpiTodayGym">هۆڵ:</span> <b id="kTodaySubRev" class="text-slate-700">0</b></span>
+          <span><span id="lblKpiTodayStore">فرۆشگا:</span> <b id="kTodayStoreRev" class="text-slate-700">0</b></span>
+        </div>
+      </div>
+
+      <!-- کۆی داهاتی مانگانە -->
+      <div class="glass rounded-3xl p-5 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-slate-500 font-bold" id="lblKpiMonthRev">کۆی داهاتی مانگ</span>
+          <span class="p-2 rounded-xl bg-amber-50 text-amber-600"><i data-lucide="wallet" class="w-5 h-5"></i></span>
+        </div>
+        <div id="kRevenue" class="text-2xl font-extrabold mt-3 text-slate-900">0</div>
+        <div class="text-[11px] text-slate-400 mt-1 flex justify-between">
+          <span><span id="lblKpiMonthGym">هۆڵ:</span> <b id="kSubRev" class="text-slate-600">0</b></span>
+          <span><span id="lblKpiMonthStore">فرۆشگا:</span> <b id="kStoreRev" class="text-slate-600">0</b></span>
+        </div>
+      </div>
+
+      <!-- ئامادەبوونی ئەمڕۆ -->
+      <div class="glass rounded-3xl p-5 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-slate-500 font-bold" id="lblKpiTodayAtt">ئامادەبوونی ئەمڕۆ</span>
+          <span class="p-2 rounded-xl bg-sky-50 text-sky-600"><i data-lucide="calendar" class="w-5 h-5"></i></span>
+        </div>
+        <div id="kAttendance" class="text-3xl font-extrabold mt-3 text-sky-600">—</div>
+      </div>
+    </div>
+
+    <div class="grid xl:grid-cols-2 gap-5">
+      <div class="glass rounded-3xl p-6 shadow-sm">
+        <h3 class="font-bold text-base mb-4 flex items-center gap-2">
+          <i data-lucide="activity" class="w-4 h-4 text-indigo-600"></i>
+          <span id="lblAttTrend">ڕەوتی ئامادەبوون (Attendance Trend)</span>
+        </h3>
+        <canvas id="attendanceChart" height="150"></canvas>
+      </div>
+      <div class="glass rounded-3xl p-6 shadow-sm">
+        <h3 class="font-bold text-base mb-4 flex items-center gap-2">
+          <i data-lucide="trending-up" class="w-4 h-4 text-emerald-600"></i>
+          <span id="lblMemberGrowth">گەشەی بەشداربووان (Members Growth)</span>
+        </h3>
+        <canvas id="memberChart" height="150"></canvas>
+      </div>
+    </div>
+
+    <!-- خشتەی ئامادەبووەکانی ئەمڕۆ (Today's Attendance) -->
+    <div class="glass rounded-3xl p-6 shadow-sm border border-slate-100">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h3 class="font-black text-lg text-slate-900 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <i data-lucide="user-check" class="w-5 h-5 text-emerald-600"></i>
+            <span id="lblTodayAttTitle">ئامادەبووەکانی ئەمڕۆ (خشتەی هاتن و چوون)</span>
+          </h3>
+          <p class="text-xs text-slate-400 mt-1" id="lblTodayAttSub">لیستی ئەو یاریزانانەی ئەمڕۆ لەڕێی کیۆسک یان ئەدمین تۆمار کراون</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="todayAttCountBadge" class="px-3.5 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-black rounded-xl border border-emerald-100">
+            0 ئامادەبوو
+          </span>
+          <button onclick="renderTodayAttendance()" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition" title="نوێکردنەوەی خشتە">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto rounded-2xl border border-slate-100">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b text-slate-600 text-xs">
+            <tr class="text-right">
+              <th class="p-3.5" id="thAttMember">بەشداربوو</th>
+              <th class="p-3.5" id="thAttCode">کۆد</th>
+              <th class="p-3.5" id="thAttSub">جۆری بەشداری</th>
+              <th class="p-3.5" id="thAttTrainer">ڕاهێنەر</th>
+              <th class="p-3.5" id="thAttIn">کاتی هاتن (Check-In)</th>
+              <th class="p-3.5" id="thAttOut">کاتی دەرچوون (Check-Out)</th>
+              <th class="p-3.5 text-center" id="thAttStatus">دۆخ</th>
+            </tr>
+          </thead>
+          <tbody id="todayAttendanceTableBody" class="divide-y divide-slate-100 text-xs">
+            <tr><td colspan="7" class="text-center p-6 text-slate-400">هیچ یاریزانێک بۆ ئەمڕۆ تۆمار نەکراوە</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="glass rounded-3xl p-5 shadow-sm">
+      <h3 class="font-bold mb-3 text-base" id="lblQuickActions">کردارە خێراکان</h3>
+      <div class="flex flex-wrap gap-3">
+        <button onclick="openMember()" class="px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-2 shadow-sm transition">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+          <span id="btnQuickNewMember">+ بەشداربووی نوێ</span>
+        </button>
+        <button onclick="quickCheckin()" class="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-2 shadow-sm transition">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span id="btnQuickCheckin">✓ Quick Check-in (ئامادەبوون)</span>
+        </button>
+        <button onclick="openSellModal()" class="px-5 py-3 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-semibold flex items-center gap-2 shadow-sm transition">
+          <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+          <span id="btnQuickSale">🛒 فرۆشتنی خێرای فرۆشگا</span>
+        </button>
+        <button onclick="openExpenseModal()" class="px-5 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-semibold flex items-center gap-2 shadow-sm transition">
+          <i data-lucide="receipt" class="w-4 h-4"></i>
+          <span id="btnQuickExpense">+ تۆمارکردنی مەسروفات</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ٢. بەشداربووان -->
+  <section id="members" class="view space-y-4">
+    <!-- پەیجی سەرەکی لیستی بەشداربووان (Members List SubView) -->
+    <div id="membersListView" class="space-y-4">
+      <div class="glass rounded-3xl p-5 shadow-sm">
+        <div class="flex flex-col md:flex-row gap-3 justify-between mb-5">
+          <div class="relative flex-1">
+            <input id="memberSearch" oninput="renderMembers()" class="w-full border border-slate-200 rounded-2xl px-4 py-3 pl-10 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="گەڕان بە ناو یان کۆد...">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+          </div>
+          <button onclick="openMember()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-sm transition">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span id="btnAddMemberBtnText">زیادکردنی بەشداربوو</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-slate-100">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+              <tr class="border-b text-right text-slate-600">
+                <th class="p-3.5" id="thMemPhotoCode">وێنە / کۆد</th>
+                <th class="p-3.5" id="thMemName">ناو</th>
+                <th class="p-3.5" id="thMemSub">جۆری بەشداری</th>
+                <th class="p-3.5" id="thMemPriceDisc">نرخ / داشکاندن</th>
+                <th class="p-3.5" id="thMemWeight">کێش</th>
+                <th class="p-3.5" id="thMemPlan">پلانی ڕاهێنان</th>
+                <th class="p-3.5" id="thMemExpiry">بەسەرچوون</th>
+                <th class="p-3.5" id="thMemStatus">دۆخ</th>
+                <th class="p-3.5 text-center" id="thMemActions">کردارەکان</th>
+              </tr>
+            </thead>
+            <tbody id="memberRows" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- سەبوویوی تەواوی دەستکاریکردنی بەشداربوو (Full-Page Edit Member Subview with 3 History Sections) -->
+    <div id="memberEditSubView" class="hidden space-y-6">
+      <!-- Breadcrumb & Top Action Header -->
+      <div class="flex flex-wrap items-center justify-between gap-4 p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm">
+        <div class="flex items-center gap-3">
+          <button type="button" onclick="closeMemberEditView()" class="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center justify-center" title="گەڕانەوە">
+            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+          </button>
+          <div>
+            <div class="flex items-center gap-2 text-xs font-bold text-slate-400">
+              <span id="bcMembersLabel">بەشداربووان</span>
+              <span>/</span>
+              <span class="text-indigo-600 font-extrabold" id="bcEditMemberLabel">دەستکاریکردنی بەشداربوو</span>
+              <span id="subViewMemberCodeBadge" class="px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-mono text-xs font-black">MEM-XXXX</span>
+            </div>
+            <h2 id="subViewMemberName" class="text-xl font-black text-slate-900 mt-0.5">ناوی تەواوی بەشداربوو</h2>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button type="button" onclick="printMemberPlanFromSubView()" class="px-4 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center gap-2 border border-emerald-200 transition">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span id="btnSubViewPrintPlanText">چاپکردنی پلان (PDF / Print)</span>
+          </button>
+          <button type="button" onclick="openMemberPortalFromSubView()" class="px-4 py-2.5 rounded-2xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs flex items-center gap-2 border border-purple-200 transition">
+            <i data-lucide="external-link" class="w-4 h-4"></i>
+            <span id="btnSubViewPortalText">پۆڕتاڵی یاریزان</span>
+          </button>
+          <button type="button" onclick="closeMemberEditView()" class="px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition">
+            <i data-lucide="x" class="w-4 h-4"></i>
+            <span id="btnSubViewCloseText">گەڕانەوە</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- فۆڕمی سەرەکی دەستکاریکردن (Main Edit Member Form) -->
+      <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
+        <h3 class="font-extrabold text-base text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+          <i data-lucide="user-cog" class="w-5 h-5 text-indigo-600"></i>
+          <span id="lblSubViewFormTitle">زانیارییە سەرەکییەکانی بەشداربوو</span>
+        </h3>
+        
+        <form id="memberEditForm" onsubmit="saveMemberSubView(event)" class="grid md:grid-cols-3 gap-4">
+          <input type="hidden" id="mevMemberCode" name="MemberCode">
+          <input type="hidden" id="mevPhotoUrl" name="PhotoUrl">
+
+          <!-- وێنە و پێشبینین -->
+          <div class="md:col-span-3 flex flex-wrap items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+            <img id="mevPhotoPreview" src="https://placehold.co/96x96?text=User" class="w-20 h-20 rounded-2xl object-cover border-2 border-white shadow-md">
+            <div>
+              <span class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewPhoto">وێنەی بەشداربوو</span>
+              <div class="flex flex-wrap gap-2">
+                <label class="cursor-pointer px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold shadow-sm transition">
+                  <span id="lblSubViewUpload">هەڵبژاردنی وێنە</span>
+                  <input type="file" accept="image/*" class="hidden" onchange="onSubViewPhotoUpload(event)">
+                </label>
+                <button type="button" onclick="startCamera('mevPhotoPreview', 'mevPhotoUrl')" class="px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-bold transition flex items-center gap-1.5">
+                  <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                  <span id="lblSubViewCam">کامێرا</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewName">ناوی تەواو *</label>
+            <input id="mevFullName" name="FullName" required class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewPhone">ژمارەی مۆبایل</label>
+            <input id="mevPhone" name="Phone" class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewGender">ڕەگەز</label>
+            <select id="mevGender" name="Gender" class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500">
+              <option value="نێر">نێر (Male)</option>
+              <option value="مێ">مێ (Female)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-indigo-700 mb-1" id="lblSubViewSubType">جۆری بەشداری (Subscription Type) *</label>
+            <select id="mevSubscriptionType" name="SubscriptionType" onchange="onSubViewSubTypeChange()" class="w-full border-2 border-indigo-200 bg-indigo-50/40 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500"></select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewPrice">نرخی بنەڕەتی (IQD)</label>
+            <input id="mevSubscriptionPrice" name="SubscriptionPrice" type="number" oninput="calcSubViewFinalPrice()" class="w-full border rounded-xl p-3 text-sm font-mono font-bold">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewDiscount">داشکاندن (IQD)</label>
+            <input id="mevDiscount" name="Discount" type="number" oninput="calcSubViewFinalPrice()" class="w-full border rounded-xl p-3 text-sm font-mono font-bold text-emerald-600">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewFinal">کۆی کۆتایی بۆ وەرگرتن (IQD)</label>
+            <input id="mevFinalPrice" name="FinalPrice" type="number" readonly class="w-full border rounded-xl p-3 text-sm font-mono font-black bg-slate-100 text-indigo-700">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewStart">بەرواری دەستپێکردن</label>
+            <input id="mevStartDate" name="StartDate" type="date" class="w-full border rounded-xl p-3 text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewExpiry">بەرواری بەسەرچوون</label>
+            <input id="mevExpiryDate" name="ExpiryDate" type="date" class="w-full border rounded-xl p-3 text-sm">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewWeight">کێشی ئێستا (kg)</label>
+            <input id="mevWeight" name="CurrentWeightKg" type="number" step="0.1" class="w-full border rounded-xl p-3 text-sm font-mono">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewHeight">باڵا (cm)</label>
+            <input id="mevHeight" name="HeightCm" type="number" class="w-full border rounded-xl p-3 text-sm font-mono">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewStatus">دۆخی بەشداری</label>
+            <select id="mevStatus" name="Status" class="w-full border rounded-xl p-3 text-sm font-bold">
+              <option value="Active">چالاک (Active)</option>
+              <option value="Expired">بەسەرچوو (Expired)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-indigo-700 mb-1" id="lblSubViewWPlan">پلانی ڕاهێنان (Workout Plan)</label>
+            <select id="mevPlanId" name="PlanId" class="w-full border rounded-xl p-3 text-sm font-semibold"></select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-emerald-700 mb-1" id="lblSubViewDPlan">سیستەمی خۆراک (Diet Plan)</label>
+            <select id="mevDietPlanId" name="DietPlanId" class="w-full border rounded-xl p-3 text-sm font-semibold"></select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-purple-700 mb-1" id="lblSubViewTrainer">ڕاهێنەری تایبەت (Trainer)</label>
+            <select id="mevTrainerName" name="TrainerName" class="w-full border rounded-xl p-3 text-sm font-semibold"></select>
+          </div>
+
+          <div class="md:col-span-3">
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubViewNotes">تێبینی و ڕێنمایی</label>
+            <input id="mevNotes" name="Notes" class="w-full border rounded-xl p-3 text-sm" placeholder="تێبینی تەندروستی، ئامانجەکان، هتد...">
+          </div>
+
+          <div class="md:col-span-3 flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <button type="button" onclick="closeMemberEditView()" class="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition" id="btnCancelEditSubView">پاشگەزبوونەوە</button>
+            <button type="submit" class="px-7 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-lg shadow-indigo-600/25 transition" id="btnSaveEditSubView">پاشەکەوتکردنی دەستکارییەکان</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ٣ بەشە گرنگەکەی خوارەوە بەپێی داواکاری بەکارهێنەر -->
+      <div class="space-y-6">
+        <!-- بەشی ١: خشتەی ئامادەبوونی ئەم یاریزانە (کەی هاتووە و کەی ڕۆشتووە) -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-2 border-b border-slate-100">
+            <div>
+              <h3 class="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                <i data-lucide="calendar-check-2" class="w-5 h-5 text-emerald-600"></i>
+                <span id="lblSubViewAttTitle">١- خشتەی ئامادەبوونی ئەم بەشداربووە (کەی هاتووە و کەی ڕۆشتووە)</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5" id="lblSubViewAttSub">تەواوی مێژووی هاتن و دەرچوونی ئەم یاریزانە لە هۆڵ بە بەروار و کات</p>
+            </div>
+            <span id="subViewAttTotalBadge" class="px-3.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-black border border-emerald-100">
+              0 جار ئامادەبووە
+            </span>
+          </div>
+
+          <div class="overflow-x-auto rounded-2xl border border-slate-100">
+            <table class="w-full text-xs">
+              <thead class="bg-slate-50 border-b text-slate-600">
+                <tr class="text-right">
+                  <th class="p-3" id="thSubAttDate">بەروار (Date)</th>
+                  <th class="p-3" id="thSubAttIn">کاتی هاتن (Check-In)</th>
+                  <th class="p-3" id="thSubAttOut">کاتی چوونەدەرەوە (Check-Out)</th>
+                  <th class="p-3" id="thSubAttDuration">ماوەی مانەوە لە هۆڵ</th>
+                  <th class="p-3 text-center" id="thSubAttStatus">دۆخ</th>
+                </tr>
+              </thead>
+              <tbody id="subViewAttendanceRows" class="divide-y divide-slate-100">
+                <tr><td colspan="5" class="p-6 text-center text-slate-400">هیچ تۆمارێکی ئامادەبوون بۆ ئەم بەشداربووە نەدۆزرایەوە</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- بەشی ٢: بەشی ئابوونە و نوێکردنەوەکانی -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-2 border-b border-slate-100">
+            <div>
+              <h3 class="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                <i data-lucide="credit-card" class="w-5 h-5 text-indigo-600"></i>
+                <span id="lblSubViewSubTitle">٢- بەشی ئابوونە و نوێکردنەوەکانی بەشداربوو</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5" id="lblSubViewSubSub">دۆخی ئابوونەی ئێستا و مێژووی نوێکردنەوە و بڕی پارەی دراو</p>
+            </div>
+            <button type="button" onclick="quickRenewSubscriptionSubView()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span id="btnSubViewRenewText">+ نوێکردنەوەی ئابوونە بۆ مانگێکی تر</span>
+            </button>
+          </div>
+
+          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4" id="subViewSubSummaryCards">
+            <div class="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100">
+              <span class="text-xs text-indigo-800 font-bold block" id="lblSubCurrentType">جۆری بەشداری</span>
+              <b class="text-base text-indigo-950 mt-1 block" id="subViewSubTypeName">—</b>
+            </div>
+            <div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100">
+              <span class="text-xs text-emerald-800 font-bold block" id="lblSubCurrentStatus">دۆخی بەشداری</span>
+              <b class="text-base text-emerald-950 mt-1 block" id="subViewSubStatusBadge">—</b>
+            </div>
+            <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-100">
+              <span class="text-xs text-amber-800 font-bold block" id="lblSubDaysLeft">ڕۆژانی ماوە</span>
+              <b class="text-base text-amber-950 mt-1 block" id="subViewSubDaysLeft">—</b>
+            </div>
+            <div class="p-4 rounded-2xl bg-purple-50/60 border border-purple-100">
+              <span class="text-xs text-purple-800 font-bold block" id="lblSubPaidAmount">بڕی دراو</span>
+              <b class="text-base text-purple-950 mt-1 block" id="subViewSubPaidAmount">0 IQD</b>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto rounded-2xl border border-slate-100">
+            <table class="w-full text-xs">
+              <thead class="bg-slate-50 border-b text-slate-600">
+                <tr class="text-right">
+                  <th class="p-3" id="thSubSubPlan">جۆری بەشداری</th>
+                  <th class="p-3" id="thSubSubStart">بەرواری دەستپێک</th>
+                  <th class="p-3" id="thSubSubEnd">بەرواری بەسەرچوون</th>
+                  <th class="p-3" id="thSubSubPrice">نرخی وەرگیراو</th>
+                  <th class="p-3" id="thSubSubDisc">داشکاندن</th>
+                  <th class="p-3 text-center" id="thSubSubStatus">دۆخ</th>
+                </tr>
+              </thead>
+              <tbody id="subViewSubscriptionRows" class="divide-y divide-slate-100">
+                <tr><td colspan="6" class="p-4 text-center text-slate-400">زانیاری لە فایلی داهاتەکان باردەکرێت...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- بەشی ٣: خشتە و کێشی بەشداربوو -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-2 border-b border-slate-100">
+            <div>
+              <h3 class="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                <i data-lucide="scale" class="w-5 h-5 text-indigo-600"></i>
+                <span id="lblSubViewWeightTitle">٣- خشتە و مێژووی کێشی بەشداربوو (Weight History)</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5" id="lblSubViewWeightSub">تۆمارەکانی کێش، تێبینییەکان و شیکاری گۆڕانکاری کێشی لەش</p>
+            </div>
+          </div>
+
+          <!-- فۆڕمی تۆمارکردنی کێشی نوێ بە شێوەیەکی خێرا -->
+          <form onsubmit="saveWeightFromSubView(event)" class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-wrap items-end gap-3 mb-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubAddWeight">کێشی نوێ (kg):</label>
+              <input type="number" step="0.1" id="subViewNewWeightInput" required placeholder="75.5" class="w-32 border rounded-xl p-2.5 text-xs font-mono font-bold bg-white">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubAddWeightDate">بەروار:</label>
+              <input type="date" id="subViewNewWeightDate" class="w-40 border rounded-xl p-2.5 text-xs bg-white">
+            </div>
+            <div class="flex-1 min-w-[180px]">
+              <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSubAddWeightNote">تێبینی:</label>
+              <input type="text" id="subViewNewWeightNote" placeholder="پێوانی بەیانیان، پاش ڕاهێنان..." class="w-full border rounded-xl p-2.5 text-xs bg-white">
+            </div>
+            <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition">
+              <span id="btnSubSaveWeightText">+ تۆمارکردنی کێش</span>
+            </button>
+          </form>
+
+          <div class="overflow-x-auto rounded-2xl border border-slate-100">
+            <table class="w-full text-xs">
+              <thead class="bg-slate-50 border-b text-slate-600">
+                <tr class="text-right">
+                  <th class="p-3" id="thSubWeightDate">بەرواری پێوان</th>
+                  <th class="p-3" id="thSubWeightKg">کێش (kg)</th>
+                  <th class="p-3" id="thSubWeightDiff">گۆڕانکاری بەراورد بە پێشوو</th>
+                  <th class="p-3" id="thSubWeightNote">تێبینی</th>
+                </tr>
+              </thead>
+              <tbody id="subViewWeightHistoryRows" class="divide-y divide-slate-100">
+                <tr><td colspan="4" class="p-6 text-center text-slate-400">هیچ تۆمارێکی پێشووی کێش بۆ ئەم یاریزانە نییە</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ٣. پلانەکان (بەرنامەکانی ڕاهێنان و سیستەمی خۆراک) -->
+  <section id="plans" class="view space-y-4">
+    <!-- تابی سەرەکی نێوان ڕاهێنان و خۆراک -->
+    <div class="flex gap-2 border-b border-slate-200 pb-2">
+      <button onclick="switchPlansMainTab('workout')" id="btnTabWorkoutPlans" class="px-5 py-2.5 rounded-2xl text-xs md:text-sm font-bold bg-white text-indigo-600 shadow-sm border border-slate-200 flex items-center gap-2">
+        <i data-lucide="dumbbell" class="w-4 h-4"></i>
+        <span id="txtTabWorkoutPlans">بەرنامەکانی ڕاهێنان (Workout Plans)</span>
+      </button>
+      <button onclick="switchPlansMainTab('diet')" id="btnTabDietPlans" class="px-5 py-2.5 rounded-2xl text-xs md:text-sm font-semibold text-slate-600 hover:bg-white/60 flex items-center gap-2">
+        <i data-lucide="utensils" class="w-4 h-4"></i>
+        <span id="txtTabDietPlans">سیستەمەکانی خۆراک و ڕجیم (Diet Plans)</span>
+      </button>
+    </div>
+
+    <!-- بەشی ١: بەرنامەکانی ڕاهێنان (Workout Plans) -->
+    <div id="plansWorkoutView" class="space-y-4">
+      <!-- لیستی سەرەکی پلانەکان (List SubView) -->
+      <div id="plansListSubView" class="glass rounded-3xl p-5 shadow-sm space-y-5">
+        <div class="flex flex-wrap justify-between items-center gap-3">
+          <div>
+            <h2 class="font-bold text-xl" id="lblWorkoutPlansTitle">پلانەکانی ڕاهێنان</h2>
+            <p class="text-xs text-slate-500" id="lblWorkoutPlansSub">بەڕێوەبردن، دابەشکردنی ڕۆژەکان و بەستنەوەی بە ڕاهێنانەکان</p>
+          </div>
+          <button onclick="openPlanBuilder()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span id="btnNewWorkoutPlanPageText">+ دروستکردنی پلانی نوێ (پەیج)</span>
+          </button>
+        </div>
+        <div id="planCards" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+      </div>
+
+      <!-- پەیجی نوێ بۆ دروستکردن و دەستکاریکردنی پلان بە شێوازی دراگ و درۆپ (Drag & Drop Plan Builder Page) -->
+      <div id="planBuilderSubView" class="hidden glass rounded-3xl p-6 shadow-sm space-y-6">
+        <!-- برێدکرەمب و سەردێڕ (Breadcrumb) -->
+        <div class="flex flex-wrap justify-between items-center gap-3 pb-4 border-b border-slate-200/80">
+          <div class="flex items-center gap-2 text-xs md:text-sm font-bold text-slate-500">
+            <button onclick="showPlansListView()" class="hover:text-indigo-600 flex items-center gap-1 transition">
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              <span id="bcWorkoutPlansText">پلانەکانی ڕاهێنان</span>
+            </button>
+            <span class="text-slate-300">/</span>
+            <span class="text-indigo-600 font-extrabold" id="planBuilderTitleText">دروستکردنی پلانی نوێ</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="showPlansListView()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+              <span id="btnCancelWorkoutPlanText">پاشگەزبوونەوە</span>
+            </button>
+            <button type="button" onclick="savePlanBuilderUI()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition">
+              <i data-lucide="save" class="w-4 h-4"></i>
+              <span id="btnSaveWorkoutPlanText">پاشەکەوتکردنی پلان لە Excel</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- زانیاری سەرەکی پلان -->
+        <div class="grid md:grid-cols-3 gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="md:col-span-1">
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblWorkoutPlanName">ناوی پلان *</label>
+            <input id="pbPlanName" class="w-full border rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500" placeholder="بۆ نموونە: پلانی دابەزاندنی کێش یان هایپەرتڕۆفی">
+            <input type="hidden" id="pbPlanId">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblWorkoutPlanDesc">وەسفی کورت دەربارەی پلان</label>
+            <input id="pbDescription" class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500" placeholder="ئامانج و تایبەتمەندی و تێبینی گشتی ئەم پلانە بنووسە...">
+          </div>
+        </div>
+
+        <!-- بەشی ڕۆژەکان و دراگ و درۆپ (Kanban Days Container) -->
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+                <i data-lucide="calendar-days" class="w-5 h-5 text-indigo-600"></i>
+                <span id="lblKanbanDaysTitle">ڕۆژەکانی ڕاهێنان و دیاریکردنی ڕاهێنانەکان (Drag & Drop)</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5" id="lblKanbanDaysSub">دەتوانیت ڕاهێنانەکان لە ڕۆژێکەوە بۆ ڕۆژێکی تر ڕابکێشیت (Drag & Drop) یان ڕیزبەندییان بگۆڕیت</p>
+            </div>
+            <button type="button" onclick="addNewDayColumnPrompt()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span id="btnAddDayColumnText">+ زیادکردنی ڕۆژ</span>
+            </button>
+          </div>
+
+          <!-- ستوونەکانی ڕۆژەکان (Columns) -->
+          <div id="pbDaysKanban" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-start"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- بەشی ٢: سیستەمەکانی خۆراک و ڕجیم (Diet Plans View) -->
+    <div id="plansDietView" class="hidden space-y-4">
+      <!-- لیستی سەرەکی سیستەمەکانی خۆراک (List SubView) -->
+      <div id="dietPlansListSubView" class="glass rounded-3xl p-5 shadow-sm space-y-5">
+        <div class="flex flex-wrap justify-between items-center gap-3">
+          <div>
+            <h2 class="font-bold text-xl" id="dietPlansTitle">سیستەمەکانی خۆراک و ڕجیم (Diet & Nutrition)</h2>
+            <p class="text-xs text-slate-500" id="dietPlansSubtitle">بەڕێوەبردنی سیستەمی خۆراکی تەواو بەپێی کالۆری، ماکرۆس، و ژەمەکان بۆ بەشداربووان</p>
+          </div>
+          <button onclick="openDietPlanBuilder()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span id="btnNewDietPlanPageText">+ دروستکردنی پلانی خۆراکی نوێ (پەیج)</span>
+          </button>
+        </div>
+
+        <div id="dietPlansCards" class="grid md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
+      </div>
+
+      <!-- پەیجی نوێ بۆ دروستکردن و دەستکاریکردنی پلانی خۆراک (Diet Plan Builder Page) -->
+      <div id="dietPlanBuilderSubView" class="hidden glass rounded-3xl p-6 shadow-sm space-y-6">
+        <!-- برێدکرەمب و دوگمەکانی سەرەوە (Breadcrumb) -->
+        <div class="flex flex-wrap justify-between items-center gap-3 pb-4 border-b border-slate-200/80">
+          <div class="flex items-center gap-2 text-xs md:text-sm font-bold text-slate-500">
+            <button onclick="showDietPlansListView()" class="hover:text-emerald-600 flex items-center gap-1 transition">
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              <span id="bcDietPlansText">سیستەمەکانی خۆراک</span>
+            </button>
+            <span class="text-slate-300">/</span>
+            <span class="text-emerald-600 font-extrabold" id="dietPlanBuilderTitleText">دروستکردنی پلانی خۆراکی نوێ</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="showDietPlansListView()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition" id="btnCancelDietPlanText">
+              پاشگەزبوونەوە
+            </button>
+            <button type="button" onclick="saveDietPlanBuilderUI()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition">
+              <i data-lucide="save" class="w-4 h-4"></i>
+              <span id="btnSaveDietPlanText">پاشەکەوتکردنی پلانی خۆراک لە Excel</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- زانیاری سەرەکی و وەسفی پلان -->
+        <div class="grid md:grid-cols-3 gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="md:col-span-1">
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblDietPlanName">ناوی پلانی خۆراک *</label>
+            <input id="dpbPlanName" class="w-full border rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500" placeholder="بۆ نموونە: پلانی کەت و دابەزاندنی چەوری">
+            <input type="hidden" id="dpbPlanId">
+          </div>
+          <div class="md:col-span-1">
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblDietPlanGoal">ئامانجی بەرنامەکە (Goal)</label>
+            <select id="dpbGoal" class="w-full border rounded-xl p-3 text-sm font-bold bg-white focus:ring-2 focus:ring-emerald-500">
+              <option value="دابەزاندنی کێش">دابەزاندنی کێش و چەوری (Fat Loss)</option>
+              <option value="دروستکردنی ماسولکە">دروستکردنی ماسولکە (Hypertrophy / Bulk)</option>
+              <option value="وشککردنەوە و کەت">وشککردنەوە و کەت (Cutting)</option>
+              <option value="پاراستنی کێش و لەشولار">پاراستنی کێش و تەندروستی گشتی (Maintenance)</option>
+              <option value="بەهێزکردنی لەش">بەهێزکردنی لەش و توانای بەرگەگرتن (Endurance)</option>
+            </select>
+          </div>
+          <div class="md:col-span-1">
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblDietPlanDesc">وەسفی کورت</label>
+            <input id="dpbDescription" class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500" placeholder="تێبینی گشتی و شێوازی جێبەجێکردن...">
+          </div>
+        </div>
+
+        <!-- ماکرۆکانی ڕۆژانە -->
+        <!-- ماکرۆکانی ڕۆژانە و پێوەرە زیادکراوەکان -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-700" id="lblDietMacrosSectionTitle">پێوەرە سەرەکی و تایبەتەکان (Daily Targets & Macros):</span>
+            <button type="button" onclick="openAddMacroCardModal()" class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center gap-1.5 border border-emerald-200 transition">
+              <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+              <span id="btnAddTargetCardText">+ زیادکردنی پێوەر / کارتی نوێ</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="p-4 bg-amber-50/70 rounded-2xl border border-amber-200/80">
+              <label class="block text-xs font-bold text-amber-900 mb-1 flex items-center gap-1">
+                <i data-lucide="flame" class="w-4 h-4 text-amber-600"></i>
+                <span id="lblDietPlanCal">کالۆری ڕۆژانە (kcal)</span>
+              </label>
+              <input id="dpbTotalCalories" type="number" class="w-full border border-amber-200 rounded-xl p-2.5 font-mono font-black text-lg text-amber-950 bg-white" placeholder="2000">
+            </div>
+            <div class="p-4 bg-rose-50/70 rounded-2xl border border-rose-200/80">
+              <label class="block text-xs font-bold text-rose-900 mb-1 flex items-center gap-1">
+                <i data-lucide="beef" class="w-4 h-4 text-rose-600"></i>
+                <span id="lblDietPlanPro">پرۆتین (گرام)</span>
+              </label>
+              <input id="dpbProteinGrams" type="number" class="w-full border border-rose-200 rounded-xl p-2.5 font-mono font-black text-lg text-rose-950 bg-white" placeholder="160">
+            </div>
+            <div class="p-4 bg-blue-50/70 rounded-2xl border border-blue-200/80">
+              <label class="block text-xs font-bold text-blue-900 mb-1 flex items-center gap-1">
+                <i data-lucide="wheat" class="w-4 h-4 text-blue-600"></i>
+                <span id="lblDietPlanCarb">کاربۆهیدرات (گرام)</span>
+              </label>
+              <input id="dpbCarbsGrams" type="number" class="w-full border border-blue-200 rounded-xl p-2.5 font-mono font-black text-lg text-blue-950 bg-white" placeholder="200">
+            </div>
+            <div class="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200/80">
+              <label class="block text-xs font-bold text-emerald-900 mb-1 flex items-center gap-1">
+                <i data-lucide="droplet" class="w-4 h-4 text-emerald-600"></i>
+                <span id="lblDietPlanFat">چەوری تەندروست (گرام)</span>
+              </label>
+              <input id="dpbFatsGrams" type="number" class="w-full border border-emerald-200 rounded-xl p-2.5 font-mono font-black text-lg text-emerald-950 bg-white" placeholder="50">
+            </div>
+          </div>
+
+          <!-- شوێنی کارتە پێوەرە زیادکراوەکان (Dynamic Extra Macro Cards Container) -->
+          <div id="dpbExtraMacrosContainer" class="grid grid-cols-2 md:grid-cols-4 gap-3 empty:hidden"></div>
+        </div>
+
+        <!-- بەشی ژەمەکان (Meals Board) -->
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+                <i data-lucide="clock" class="w-5 h-5 text-emerald-600"></i>
+                <span id="lblDietPlanMealsTitle">خشتەی ژەمەکان و پێکهاتە خۆراکییەکان</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5" id="lblDietPlanMealsSubtitle">ژەمەکانی ڕۆژانە دابنێ و لە کتێبخانەی خۆراکەکان یان بە دەست خواردنەکان زیاد بکە</p>
+            </div>
+            <button type="button" onclick="addNewMealToDietPlan()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span id="btnAddMealBtnText">+ زیادکردنی ژەم</span>
+            </button>
+          </div>
+
+          <div id="dpbMealsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-5 items-start"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ٤. داهات و خەرجی (Finances) -->
+  <section id="finances" class="view space-y-5">
+    <!-- کاردەکانی کورتەی دارایی (Vibrant & Colorful with Net Profit Arrow) -->
+    <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <!-- 1. Gym Membership Revenue -->
+      <div class="rounded-3xl p-5 shadow-sm border border-indigo-200 bg-gradient-to-br from-indigo-50/90 via-white to-indigo-100/50 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-indigo-950 font-extrabold" id="lblFSubRev">داهاتی ئابوونەی هۆڵ</span>
+          <span class="p-2.5 rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-600/30"><i data-lucide="wallet" class="w-5 h-5"></i></span>
+        </div>
+        <div id="fSubRev" class="text-2xl font-black mt-3 text-indigo-700">0 IQD</div>
+        <div class="text-[11px] text-indigo-600/90 mt-1 font-bold" id="lblFSubBadge">ئابوونە و بەشدارییەکان</div>
+      </div>
+
+      <!-- 2. Store Revenue -->
+      <div class="rounded-3xl p-5 shadow-sm border border-amber-200 bg-gradient-to-br from-amber-50/90 via-white to-amber-100/50 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-amber-950 font-extrabold" id="lblFStoreRev">داهاتی فرۆشگا (Store)</span>
+          <span class="p-2.5 rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/30"><i data-lucide="shopping-bag" class="w-5 h-5"></i></span>
+        </div>
+        <div id="fStoreRev" class="text-2xl font-black mt-3 text-amber-700">0 IQD</div>
+        <div class="text-[11px] text-amber-600/90 mt-1 font-bold" id="lblFStoreBadge">فرۆشتنی کەلوپەل و خواردنەوەکان</div>
+      </div>
+
+      <!-- 3. Expenses -->
+      <div class="rounded-3xl p-5 shadow-sm border border-rose-200 bg-gradient-to-br from-rose-50/90 via-white to-rose-100/50 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-rose-950 font-extrabold" id="lblFExpenses">کۆی مەسروفات (خەرجی)</span>
+          <span class="p-2.5 rounded-2xl bg-rose-600 text-white shadow-md shadow-rose-600/30"><i data-lucide="receipt" class="w-5 h-5"></i></span>
+        </div>
+        <div id="fExpenses" class="text-2xl font-black mt-3 text-rose-700">0 IQD</div>
+        <div class="text-[11px] text-rose-600/90 mt-1 font-bold" id="lblFExpBadge">کرێ، مووچە و پێداویستییەکان</div>
+      </div>
+
+      <!-- 4. Net Profit / Loss with Dynamic Arrow -->
+      <div id="fNetProfitCard" class="rounded-3xl p-5 shadow-sm border-2 border-emerald-300 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/90 relative overflow-hidden transition-all duration-300">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-black text-slate-900" id="lblFNetProfit">داهاتی پوخت (قازانج)</span>
+          <span id="fNetProfitArrowBadge" class="p-2.5 rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-600/30 flex items-center justify-center transition-all">
+            <i data-lucide="trending-up" id="fNetProfitIcon" class="w-5 h-5"></i>
+          </span>
+        </div>
+        <div id="fNetProfit" class="text-2xl font-black mt-3 text-emerald-700 flex items-center gap-1.5">
+          <span id="fNetProfitArrowSymbol" class="text-2xl font-black">↑</span>
+          <span id="fNetProfitValue">0 IQD</span>
+        </div>
+        <div class="text-[11px] font-bold mt-1 text-emerald-700" id="fNetProfitStatus">+ قازانجی پوخت (داهات زیاترە)</div>
+      </div>
+    </div>
+
+    <!-- بەشی فلتەری بەروار (ڕۆژ، مانگ، ساڵ، هەموو کات) -->
+    <div class="glass rounded-2xl p-3.5 shadow-sm flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2 text-xs font-bold text-slate-600">
+        <i data-lucide="filter" class="w-4 h-4 text-indigo-600"></i>
+        <span>فلتەری کات:</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="setFinanceFilter('today')" id="fBtn-today" class="f-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">ئەمڕۆ (Today)</button>
+        <button onclick="setFinanceFilter('month')" id="fBtn-month" class="f-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">ئەم مانگە (This Month)</button>
+        <button onclick="setFinanceFilter('year')" id="fBtn-year" class="f-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">ئەمساڵ (This Year)</button>
+        <button onclick="setFinanceFilter('all')" id="fBtn-all" class="f-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow transition">هەمووی (All)</button>
+      </div>
+    </div>
+
+    <!-- تابەکانی داهات و مەسروفات و فرۆشتن و بەراوردکاری (بەپێی داواکاری) -->
+    <div class="glass rounded-3xl p-5 shadow-sm space-y-4">
+      <div class="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+        <button onclick="switchFinanceTab('expenses')" id="ftab-btn-expenses" class="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-rose-600 shadow-sm border border-slate-200 flex items-center gap-2">
+          <i data-lucide="receipt" class="w-4 h-4"></i>
+          <span>تۆماری مەسروفات (Expenses)</span>
+        </button>
+        <button onclick="switchFinanceTab('members')" id="ftab-btn-members" class="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold text-slate-600 hover:bg-white/60 flex items-center gap-2">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          <span>داهاتی بەشداربووان (Memberships)</span>
+        </button>
+        <button onclick="switchFinanceTab('sales')" id="ftab-btn-sales" class="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold text-slate-600 hover:bg-white/60 flex items-center gap-2">
+          <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+          <span>فرۆشتنی کاڵا (Store Sales)</span>
+        </button>
+        <button onclick="switchFinanceTab('comparison')" id="ftab-btn-comparison" class="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold text-slate-600 hover:bg-white/60 flex items-center gap-2">
+          <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+          <span>بەراوردکاری دارایی (Analytics & Comparison)</span>
+        </button>
+      </div>
+
+      <!-- تابی ١: مەسروفات -->
+      <div id="ftab-expenses" class="space-y-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="font-bold text-base text-slate-800" id="lblFinExpensesTitle">لیستی مەسروفات و خەرجییەکان</h3>
+            <p class="text-xs text-slate-400" id="lblFinExpensesSub">کرێ، کارەبا، مووچە و پێداویستییەکان لەگەڵ خەرجی دووبارەبووەوە</p>
+          </div>
+          <button onclick="openExpenseModal()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span id="btnNewExpenseText">+ خەرجی نوێ</span>
+          </button>
+        </div>
+        <div class="overflow-x-auto max-h-96 overflow-y-auto rounded-2xl border border-slate-100">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-50 border-b text-slate-500">
+              <tr class="text-right">
+                <th class="p-3" id="thExpTitle">ناونیشان</th>
+                <th class="p-3" id="thExpCategory">جۆر</th>
+                <th class="p-3" id="thExpUnitType">جۆری یەکە</th>
+                <th class="p-3" id="thExpQty">دانە/ژمارە</th>
+                <th class="p-3" id="thExpUnitPrice">نرخی تاک</th>
+                <th class="p-3" id="thExpAmount">کۆی گشتی (IQD)</th>
+                <th class="p-3" id="thExpRecurring">دووبارەبوونەوە</th>
+                <th class="p-3" id="thExpDate">بەروار</th>
+                <th class="p-3 text-center" id="thExpAction">کردار</th>
+              </tr>
+            </thead>
+            <tbody id="expenseRows" class="divide-y divide-slate-100"></tbody>
+            <tfoot id="expenseFooter" class="bg-slate-100 font-bold border-t-2 border-slate-200 text-slate-800">
+              <tr>
+                <td class="p-3 text-slate-900" colspan="3"><span id="lblExpTotalFooter">کۆی گشتی مەسروفات:</span> <span id="expTotalCount" class="text-indigo-600 font-bold">0 خەرجی</span></td>
+                <td class="p-3 text-indigo-700 font-mono" id="expTotalQty">0</td>
+                <td class="p-3"></td>
+                <td class="p-3 text-rose-700 font-mono font-black text-sm" id="expTotalAmount">0 IQD</td>
+                <td class="p-3" colspan="3"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- تابی ٢: داهاتی بەشداربووان -->
+      <div id="ftab-members" class="hidden space-y-4">
+        <h3 class="font-bold text-base text-slate-800" id="lblFinMembersIncomeTitle">داهاتی ئابوونە و بەشدارییەکان</h3>
+        <div class="overflow-x-auto max-h-96 overflow-y-auto rounded-2xl border border-slate-100">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-50 border-b text-slate-500">
+              <tr class="text-right">
+                <th class="p-3" id="thIncMemberCode">کۆدی یاریزان</th>
+                <th class="p-3" id="thIncFullName">ناوی تەواو</th>
+                <th class="p-3" id="thIncSubType">جۆری بەشداری</th>
+                <th class="p-3" id="thIncPrice">نرخ</th>
+                <th class="p-3" id="thIncDiscount">داشکاندن</th>
+                <th class="p-3" id="thIncPaid">پارەی وەرگیراو</th>
+                <th class="p-3" id="thIncStartDate">بەرواری دەستپێک</th>
+              </tr>
+            </thead>
+            <tbody id="memberIncomeRows" class="divide-y divide-slate-100"></tbody>
+            <tfoot id="memberIncomeFooter" class="bg-slate-100 font-bold border-t-2 border-slate-200 text-slate-800">
+              <tr>
+                <td class="p-3 text-slate-900" colspan="3"><span id="lblMemTotalFooter">کۆی داهاتی ئابوونە:</span> <span id="memTotalCount" class="text-indigo-600 font-bold">0 بەشداربوو</span></td>
+                <td class="p-3 text-slate-600 font-mono" id="memTotalBasePrice">0 IQD</td>
+                <td class="p-3 text-emerald-600 font-mono" id="memTotalDiscount">0 IQD</td>
+                <td class="p-3 text-emerald-700 font-mono font-black text-sm" id="memTotalPaidAmount">0 IQD</td>
+                <td class="p-3"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- تابی ٣: فرۆشتنی فرۆشگا -->
+      <div id="ftab-sales" class="hidden space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-base text-slate-800" id="lblFinSalesTitle">مێژووی فرۆشتنی کاڵاکانی فرۆشگا</h3>
+          <button onclick="openSellModal()" class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span id="btnNewSaleText">+ فرۆشتنی نوێ</span>
+          </button>
+        </div>
+        <div class="overflow-x-auto max-h-96 overflow-y-auto rounded-2xl border border-slate-100">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-50 border-b text-slate-500">
+              <tr class="text-right">
+                <th class="p-3" id="thSaleItemName">ناوی کاڵا</th>
+                <th class="p-3" id="thSaleCustomer">کڕیار</th>
+                <th class="p-3" id="thSaleQuantity">دانە</th>
+                <th class="p-3" id="thSaleUnitPrice">نرخی یەکە</th>
+                <th class="p-3" id="thSaleTotal">کۆی گشتی</th>
+                <th class="p-3" id="thSaleDate">بەروار</th>
+              </tr>
+            </thead>
+            <tbody id="salesHistoryRows" class="divide-y divide-slate-100"></tbody>
+            <tfoot id="salesFooter" class="bg-slate-100 font-bold border-t-2 border-slate-200 text-slate-800">
+              <tr>
+                <td class="p-3 text-slate-900" colspan="2"><span id="lblSalesTotalFooter">کۆی فرۆشتنی کاڵا:</span> <span id="salesTotalCount" class="text-indigo-600 font-bold">0 فرۆش</span></td>
+                <td class="p-3 text-indigo-700 font-mono font-black" id="salesTotalQty">0 دانە</td>
+                <td class="p-3"></td>
+                <td class="p-3 text-emerald-700 font-mono font-black text-sm" id="salesTotalAmount">0 IQD</td>
+                <td class="p-3"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- تابی ٤: بەراوردکاری دارایی (Comparison & Analytics) -->
+      <div id="ftab-comparison" class="hidden space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-base text-slate-800" id="lblFinCompTitle">بەراوردکاری و شیتاڵکاری نێوان داهات، فرۆشتن و مەسروفات</h3>
+            <p class="text-xs text-slate-400" id="lblFinCompSub">بەراوردکردنی ڕێژەی قازانج و داهاتەکان بەپێی کات</p>
+          </div>
+          <!-- فلتەری تابی بەراوردکاری (ڕۆژ، مانگ، ساڵ، هەموو کات) -->
+          <div class="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+            <button onclick="setFinanceFilter('today')" id="cBtn-today" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-700 hover:bg-white">ئەمڕۆ</button>
+            <button onclick="setFinanceFilter('month')" id="cBtn-month" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-700 hover:bg-white">ئەم مانگە</button>
+            <button onclick="setFinanceFilter('year')" id="cBtn-year" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-700 hover:bg-white">ئەمساڵ</button>
+            <button onclick="setFinanceFilter('all')" id="cBtn-all" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-700 hover:bg-white">هەموو کات</button>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-5">
+          <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+            <h4 class="font-bold text-xs text-slate-700 mb-3 flex items-center gap-2">
+              <i data-lucide="bar-chart" class="w-4 h-4 text-indigo-600"></i>
+              <span id="lblFinCompChartTitle">چارتی بەراوردکاری مانگانەی داهات و مەسروفات</span>
+            </h4>
+            <canvas id="financeComparisonChart" height="150"></canvas>
+          </div>
+
+          <div class="space-y-4">
+            <div class="p-5 bg-gradient-to-br from-indigo-50 to-emerald-50 rounded-2xl border border-indigo-100 space-y-3">
+              <span class="text-xs font-bold text-indigo-900 block">پوختەی دارایی ئەم ماوەیە:</span>
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-500">کۆی گشتی داهات:</span>
+                <b id="compTotalIncome" class="text-indigo-700 font-black">0 IQD</b>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-500">کۆی گشتی خەرجی:</span>
+                <b id="compTotalExpenses" class="text-rose-600 font-black">0 IQD</b>
+              </div>
+              <div class="pt-2 border-t border-indigo-100 flex justify-between items-center text-sm">
+                <span class="font-bold text-slate-800">داهاتی پوخت (قازانج):</span>
+                <b id="compNetProfit" class="text-emerald-700 font-black">0 IQD</b>
+              </div>
+            </div>
+
+            <!-- خەرجی دووبارەبووەوە (Recurring expenses alert) -->
+            <div class="p-4 bg-amber-50/70 rounded-2xl border border-amber-200/60 space-y-2">
+              <b class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-amber-700"></i>
+                <span id="lblRecurringExpensesTitle">خەرجییە دووبارەبووەوەکان:</span>
+              </b>
+              <div id="recurringExpensesList" class="space-y-1.5 text-xs text-amber-900 max-h-36 overflow-y-auto"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- دیڤی ڕێنمایی و پێشنیارەکان بۆ خاوەن پڕۆژە لەسەر ئەساسی داتاکان (Smart Financial Insights & Advisory) -->
+        <div class="mt-5 p-5 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl shadow-xl border border-indigo-500/30 space-y-4">
+          <div class="flex flex-wrap justify-between items-center gap-3 pb-3 border-b border-white/10">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white grid place-items-center shadow-md">
+                <i data-lucide="sparkles" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h4 class="font-extrabold text-base tracking-wide" id="finAdviceHeaderTitle">ڕێنمایی و پێشنیارە ژیرەکان بۆ گەشەپێدانی پڕۆژەکەت</h4>
+                <p class="text-xs text-indigo-200" id="finAdviceHeaderSub">شیکاری داتاکانی ئەم ماوەیە لەگەڵ هەنگاوە پراکتیکییەکان بۆ زیادکردنی داهات و کەمکردنەوەی مەسروفات</p>
+              </div>
+            </div>
+            <span id="finHealthBadge" class="text-xs font-black px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">تەندروستی: نایاب</span>
+          </div>
+
+          <div id="finAdviceList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ٥. فرۆشگا بە سێکشن و بارکۆد سکانەر (Store & Barcode POS) -->
+  <section id="store" class="view space-y-5">
+    <div class="glass rounded-3xl p-5 shadow-sm space-y-5">
+      <div class="flex flex-wrap justify-between items-center gap-3">
+        <div>
+          <h2 class="font-bold text-xl" id="lblStoreTitle">فرۆشگای هۆڵ (Store & Barcode POS)</h2>
+          <p class="text-xs text-slate-500" id="lblStoreSub">کاڵاکان بەپێی بەشەکان، سکانی بارکۆد، پڕفرۆشترینەکان، و کاڵا نزیک لە بەسەرچووەکان</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="openSellModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition">
+            <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+            <span id="btnManualSellText">🛒 فرۆشتن بە دەست</span>
+          </button>
+          <button onclick="openStoreItemModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span id="btnNewItemText">+ کاڵای نوێ</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- تابی سەرەکی فرۆشگا (کاڵاکان، زۆرترین فرۆش، نزیک ئێکسپایەر) -->
+      <div class="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+        <button onclick="switchStoreTab('items')" id="stab-btn-items" class="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-indigo-600 shadow-sm border border-slate-200 flex items-center gap-2">
+          <i data-lucide="package" class="w-4 h-4"></i>
+          <span id="stab-btn-items-text">سەرجەم کاڵاکان و POS</span>
+        </button>
+        <button onclick="switchStoreTab('topSellers')" id="stab-btn-topSellers" class="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold text-slate-600 hover:bg-white/60 flex items-center gap-2">
+          <i data-lucide="flame" class="w-4 h-4 text-orange-500"></i>
+          <span id="stab-btn-topSellers-text">🔥 زۆرترین فرۆشراوەکان (Top Sellers)</span>
+        </button>
+        <button onclick="switchStoreTab('expiring')" id="stab-btn-expiring" class="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold text-slate-600 hover:bg-white/60 flex items-center gap-2">
+          <i data-lucide="hourglass" class="w-4 h-4 text-amber-500"></i>
+          <span id="stab-btn-expiring-text">⏳ نزیک لە بەسەرچوون (Expiring Items)</span>
+        </button>
+        <button onclick="switchStoreTab('inventory')" id="stab-btn-inventory" class="px-4 py-2 rounded-xl text-xs md:text-sm font-semibold text-slate-600 hover:bg-white/60 flex items-center gap-2">
+          <i data-lucide="boxes" class="w-4 h-4 text-indigo-600"></i>
+          <span id="stab-btn-inventory-text">📦 کۆگا و بەڕێوەبردنی کاڵاکان (Inventory)</span>
+        </button>
+      </div>
+
+      <!-- سێکشن ١: سەرجەم کاڵاکان و بارکۆد سکانەر -->
+      <div id="stab-items" class="space-y-6">
+        <!-- بارکۆد سکانەری خێرا -->
+        <div class="bg-indigo-50/60 p-4 rounded-2xl border-2 border-indigo-200 flex flex-col sm:flex-row items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white grid place-items-center shrink-0">
+            <i data-lucide="barcode" class="w-6 h-6"></i>
+          </div>
+          <div class="flex-1 w-full">
+            <input id="storeBarcodeInput" onkeydown="if(event.key==='Enter')sellByBarcode()" class="w-full bg-white border border-indigo-200 rounded-xl px-4 py-2.5 text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="📷 بارکۆد لێبدە یان بە ئامێری بارکۆد سکانی بکە و Enter دابگرە...">
+          </div>
+          <button onclick="sellByBarcode()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition shrink-0" id="btnSellByBarcodeText">
+            فرۆشتنی بارکۆد
+          </button>
+        </div>
+
+        <!-- فلتەری سێکشنەکانی فرۆشگا -->
+        <div id="storeCategoryTabs" class="flex flex-wrap gap-2 border-b pb-3"></div>
+
+        <!-- بەشەکانی فرۆشگا بە جیاکراوەیی -->
+        <div id="storeSectionsContainer" class="space-y-8"></div>
+      </div>
+
+      <!-- سێکشن ٢: زۆرترین فرۆشراوەکان (Top Sellers) -->
+      <div id="stab-topSellers" class="hidden space-y-4">
+        <div>
+          <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-5 h-5 text-indigo-600"></i>
+            <span id="lblStoreTopSellersTitle">ڕیزبەندی پڕفرۆشترین کاڵاکانی هۆڵ (Best Sellers)</span>
+          </h3>
+          <p class="text-xs text-slate-400" id="lblStoreTopSellersSub">ئەو کاڵایانەی زۆرترین خواست و زۆرترین داهاتیان هەبووە</p>
+        </div>
+        <div id="topSellersContainer" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+
+      <!-- سێکشن ٣: کاڵاکانی نزیک لە بەسەرچوون (Expiring Items List) -->
+      <div id="stab-expiring" class="hidden space-y-4">
+        <div>
+          <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600"></i>
+            <span id="lblStoreExpiringTitle">لیستی کاڵاکانی نزیک لە بەسەرچوون و بەسەرچووەکان</span>
+          </h3>
+          <p class="text-xs text-slate-400" id="lblStoreExpiringSub">چاودێری ڕێکەوتی بەسەرچوونی تەواوکەرە خۆراکییەکان، خواردنەوە و پرۆتینەکان</p>
+        </div>
+        <div class="overflow-x-auto rounded-2xl border border-slate-100">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-50 border-b text-slate-500">
+              <tr class="text-right">
+                <th class="p-3" id="thExpItemName">کاڵا</th>
+                <th class="p-3" id="thExpItemCategory">جۆر</th>
+                <th class="p-3" id="thExpItemStock">مەخزەن (مەوجود)</th>
+                <th class="p-3" id="thExpItemExpiry">بەرواری بەسەرچوون</th>
+                <th class="p-3" id="thExpItemDaysLeft">ڕۆژی ماوە</th>
+                <th class="p-3 text-center" id="thExpItemStatus">دۆخ</th>
+              </tr>
+            </thead>
+            <tbody id="expiringItemsRows" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- سێکشن ٤: کۆگا و بەڕێوەبردنی گشتی کاڵاکان (Store Inventory Table) -->
+      <div id="stab-inventory" class="hidden space-y-4">
+        <div class="flex flex-wrap justify-between items-center gap-3">
+          <div>
+            <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+              <i data-lucide="boxes" class="w-5 h-5 text-indigo-600"></i>
+              <span id="lblStoreInvTitle">کۆگای گشتی و بەڕێوەبردنی وردی کاڵاکان</span>
+            </h3>
+            <p class="text-xs text-slate-400" id="lblStoreInvSub">چاودێری مەخزەن، بارکۆد، تێچوو، نرخی فرۆشتن، قازانج و بەسەرچوون لەگەڵ دەستکاری و سڕینەوە</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="text" id="inventorySearchInput" oninput="renderStoreInventory()" placeholder="🔍 گەڕان بەپێی ناو یان بارکۆد..." class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-56">
+          </div>
+        </div>
+        <div class="overflow-x-auto rounded-2xl border border-slate-100 max-h-[500px] overflow-y-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-50 border-b text-slate-500 sticky top-0 bg-opacity-95 backdrop-blur z-10">
+              <tr class="text-right">
+                <th class="p-3">وێنە</th>
+                <th class="p-3">بارکۆد</th>
+                <th class="p-3">ناوی کاڵا</th>
+                <th class="p-3">جۆر / بەش</th>
+                <th class="p-3 text-center">مەخزەن (مەوجود)</th>
+                <th class="p-3">تێچوو (IQD)</th>
+                <th class="p-3">فرۆشتن (IQD)</th>
+                <th class="p-3">قازانجی دانە</th>
+                <th class="p-3">بەسەرچوون</th>
+                <th class="p-3 text-center">کردار</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableRows" class="divide-y divide-slate-100"></tbody>
+            <tfoot id="inventoryFooter" class="bg-slate-100 font-bold border-t-2 border-slate-200 text-slate-800 sticky bottom-0">
+              <tr>
+                <td class="p-3" colspan="4"><span id="lblInvCount">کۆی کاڵاکان:</span> <span id="invTotalItemCount" class="text-indigo-600 font-bold">0 کاڵا</span></td>
+                <td class="p-3 text-center text-indigo-700 font-mono font-bold" id="invTotalStockCount">0 دانە</td>
+                <td class="p-3 font-mono text-slate-700" id="invTotalCostValue">0 IQD</td>
+                <td class="p-3 font-mono text-emerald-700" id="invTotalRetailValue">0 IQD</td>
+                <td class="p-3 font-mono text-emerald-600" id="invTotalPotentialProfit">0 IQD</td>
+                <td class="p-3" colspan="2"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ٦. ستاف و کارمەندان (Staff Management) -->
+  <section id="staff" class="view space-y-4">
+    <div class="glass rounded-3xl p-5 shadow-sm">
+      <div class="flex flex-wrap justify-between items-center gap-3 mb-5">
+        <div>
+          <h2 class="font-bold text-xl" id="lblStaffSectionTitle">ستاف و کارمەندانی هۆڵ (Staff & Roles)</h2>
+          <p class="text-xs text-slate-500" id="lblStaffSectionSub">بەڕێوەبردنی کارمەندان، مووچە، و دەسەڵاتەکانی بەشەکانی سیستەم</p>
+        </div>
+        <button onclick="openStaffModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-sm transition">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+          <span id="btnNewStaffText">+ کارمەندی نوێ</span>
+        </button>
+      </div>
+
+      <div class="overflow-x-auto rounded-2xl border border-slate-100">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50">
+            <tr class="border-b text-right text-slate-600">
+              <th class="p-3.5" id="thStaffCode">کۆد</th>
+              <th class="p-3.5" id="thStaffName">ناوی سیانی</th>
+              <th class="p-3.5" id="thStaffRole">ڕۆڵ / پلە</th>
+              <th class="p-3.5" id="thStaffPhone">مۆبایل</th>
+              <th class="p-3.5" id="thStaffSalary">مووچەی مانگانە</th>
+              <th class="p-3.5" id="thStaffPerms">دەسەڵاتەکان (Permissions)</th>
+              <th class="p-3.5" id="thStaffStatus">دۆخ</th>
+              <th class="p-3.5 text-center" id="thStaffAction">کردار</th>
+            </tr>
+          </thead>
+          <tbody id="staffRows" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- بەشی ئاگادارییەکان (Notifications) -->
+  <section id="notifications" class="view space-y-4">
+    <div class="grid lg:grid-cols-3 gap-5">
+      <!-- ناردنی ئاگاداری نوێ -->
+      <div class="glass rounded-3xl p-6 shadow-sm border border-slate-100 lg:col-span-1">
+        <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+          <i data-lucide="send" class="w-5 h-5 text-indigo-600"></i>
+          <span id="lblNewNotifTitle">ناردنی ئاگاداری نوێ</span>
+        </h2>
+        <form onsubmit="sendNotificationUI(event)" class="space-y-3.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblNotifTitleField">سەردێڕی ئاگاداری *</label>
+            <input id="notifTitle" name="Title" required class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500" placeholder="بۆ نموونە: پشووی فەرمی، نوێکردنەوەی پلان">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblNotifMsgField">دەقی ئاگاداری *</label>
+            <textarea id="notifMessage" name="Message" rows="3" required class="w-full border rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500" placeholder="دەقی تەواوی پەیامەکە بنووسە..."></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblNotifTargetField">ئاراستەکردن بۆ (کێ پێی بگات؟) *</label>
+            <select id="notifTargetType" name="TargetType" onchange="toggleNotifMemberSelect()" class="w-full border rounded-xl p-3 text-sm font-semibold">
+              <option value="all" id="optNotifAll">📢 گشت بەشداربووان (Broadcast)</option>
+              <option value="member" id="optNotifMember">👤 بەشداربووی دیاریکراو (Specific Member)</option>
+            </select>
+          </div>
+          <div id="notifMemberSelectWrapper" class="hidden">
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblNotifTargetMember">بەشداربوو هەڵبژێرە:</label>
+            <select id="notifTargetMember" name="TargetMemberCode" class="w-full border rounded-xl p-3 text-sm font-mono"></select>
+          </div>
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold p-3.5 rounded-xl shadow transition flex items-center justify-center gap-2">
+            <i data-lucide="bell-ring" class="w-4 h-4"></i>
+            <span id="btnSendNotifText">ناردنی ئاگاداری بۆ Excel</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- لیستی ئاگادارییە نێردراوەکان -->
+      <div class="glass rounded-3xl p-6 shadow-sm border border-slate-100 lg:col-span-2 space-y-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="font-bold text-lg" id="lblSentNotifsTitle">ئاگادارییە نێردراوەکان (Sent Notifications)</h2>
+            <p class="text-xs text-slate-400" id="lblSentNotifsSub">ئەو ئاگادارییانەی لە ناو سیستەم و پۆڕتاڵی یاریزانان دەردەکەون</p>
+          </div>
+          <button onclick="renderNotifications()" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition" title="نوێکردنەوە">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="overflow-x-auto rounded-2xl border border-slate-100">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b text-slate-500 text-xs">
+              <tr class="text-right">
+                <th class="p-3" id="thNotifTitle">سەردێڕ</th>
+                <th class="p-3" id="thNotifMsg">دەقی ئاگاداری</th>
+                <th class="p-3" id="thNotifTarget">ئاراستەکراو</th>
+                <th class="p-3" id="thNotifDate">بەروار</th>
+                <th class="p-3 text-center" id="thNotifAction">کردار</th>
+              </tr>
+            </thead>
+            <tbody id="notificationRows" class="divide-y divide-slate-100 text-xs">
+              <tr><td colspan="5" class="text-center p-6 text-slate-400">هیچ ئاگادارییەک نەنێردراوە</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ٧. ڕێکخستنەکان (Settings) -->
+  <section id="settings" class="view space-y-5">
+    <div class="flex gap-2 border-b border-slate-200 pb-2">
+      <button onclick="switchSettingsTab('general')" id="tab-btn-general" class="px-4 py-2 rounded-xl text-sm font-bold bg-white text-indigo-600 shadow-sm border border-slate-200">زانیارییە گشتییەکان و ئەباوت</button>
+      <button onclick="switchSettingsTab('subscriptions')" id="tab-btn-subscriptions" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-white/50">جۆرەکانی بەشداریکردن</button>
+      <button onclick="switchSettingsTab('exercises')" id="tab-btn-exercises" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-white/50">کتێبخانەی ڕاهێنانەکان</button>
+      <button onclick="switchSettingsTab('backup')" id="tab-btn-backup" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-white/50 flex items-center gap-1.5">
+        <i data-lucide="download-cloud" class="w-4 h-4"></i>
+        <span id="tab-btn-backup-text">داگرتن و باکئەپی داتاکان</span>
+      </button>
+    </div>
+
+    <div id="set-tab-general" class="glass rounded-3xl p-6 w-full shadow-sm">
+      <div class="flex flex-wrap justify-between items-center gap-3 mb-6 pb-4 border-b border-slate-200">
+        <div>
+          <h2 class="font-bold text-lg flex items-center gap-2 text-slate-800">
+            <i data-lucide="sliders" class="w-5 h-5 text-indigo-600"></i>
+            <span id="lblGeneralSettingsTitle">ڕێکخستنی زانیارییە گشتییەکانی هۆڵ، زمان و دراو</span>
+          </h2>
+          <p class="text-xs text-slate-400">ڕێکخستنی ناوی هۆڵ، زمانی بەرنامە، نرخی دۆلار، پەیوەندی و سۆشیال میدیا</p>
+        </div>
+        <button onclick="saveSettingsUI()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md shadow-indigo-600/20 transition flex items-center gap-2 text-xs" id="btnSaveSettingsTopText">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span>پاشەکەوتکردن لە Excel</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- ستوونی ١: زانیاری بنەڕەتی، زمان، دراو و شکاندنەوە، لۆگۆ، باکگراوەند -->
+        <div class="space-y-4">
+          <div class="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+            <h3 class="font-bold text-xs text-slate-700 flex items-center gap-1.5">
+              <i data-lucide="building-2" class="w-4 h-4 text-indigo-600"></i>
+              <span>ناسنامەی هۆڵ و زمانی بەرنامە</span>
+            </h3>
+
+            <div class="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold mb-1 text-slate-700" id="lblGymNameSetting">ناوی هۆڵ (Gym Name) *</label>
+                <input id="sGymName" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:ring-2 focus:ring-indigo-500">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1 text-slate-700">زمانی سیستەم (System Language)</label>
+                <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-1">
+                  <button type="button" onclick="setAppLanguage('ku')" id="langBtnKu" class="flex-1 py-1.5 rounded-lg text-xs font-bold transition">کوردی</button>
+                  <button type="button" onclick="setAppLanguage('en')" id="langBtnEn" class="flex-1 py-1.5 rounded-lg text-xs font-bold transition">English</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold mb-1 text-slate-700" id="lblCurrencySetting">دراوی سەرەکی</label>
+                <input id="sCurrency" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs font-mono font-bold" placeholder="IQD">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1 text-slate-700">نرخی دۆلار (100$ بەرامبەر دینار)</label>
+                <div class="relative">
+                  <input id="sExchangeRate" type="number" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500" placeholder="150000">
+                  <span class="absolute left-3 top-2.5 text-[10px] font-bold text-slate-400">IQD</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+            <h3 class="font-bold text-xs text-slate-700 flex items-center gap-1.5">
+              <i data-lucide="image" class="w-4 h-4 text-indigo-600"></i>
+              <span>لۆگۆ و وێنەی باکگراوەندی کیۆسک</span>
+            </h3>
+
+            <div>
+              <label class="block text-xs font-semibold mb-1 text-slate-700" id="lblGymLogo">لینکی وێنەی لۆگۆ (Gym Logo URL)</label>
+              <input id="sLogo" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500" placeholder="https://...">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold mb-1 text-slate-700" id="lblKioskBgSetting">وێنەی باکگراوەندی پەڕەی چێک ئین (Kiosk Background URL)</label>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input id="sKioskBackgroundUrl" class="flex-1 bg-white border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500" placeholder="https://images.unsplash.com/...">
+                <div class="flex gap-1 shrink-0">
+                  <button type="button" onclick="$('sKioskBackgroundUrl').value='https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1600'" class="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl text-[10px] font-bold text-slate-700 transition">Gym 1</button>
+                  <button type="button" onclick="$('sKioskBackgroundUrl').value='https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=1600'" class="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl text-[10px] font-bold text-slate-700 transition">Gym 2</button>
+                  <button type="button" onclick="$('sKioskBackgroundUrl').value='https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=1600'" class="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl text-[10px] font-bold text-slate-700 transition">Gym 3</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold mb-1 text-slate-700" id="lblGymBio">وەسف دەربارەی هۆڵ (About / Bio) بۆ ئەپی بەشداربوو</label>
+              <textarea id="sBio" rows="3" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500" placeholder="وەسفێکی کورت دەربارەی هۆڵ، خزمەتگوزارییەکان و ستاف..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- ستوونی ٢: ناونیشان، کاتژمێری کارکردن، ژمارەی مۆبایلە دینامیکییەکان، سۆشیال میدیاکان لەگەڵ سویچی On/Off -->
+        <div class="space-y-4">
+          <div class="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+            <h3 class="font-bold text-xs text-slate-700 flex items-center gap-1.5">
+              <i data-lucide="map-pin" class="w-4 h-4 text-indigo-600"></i>
+              <span>شوێن و کاتژمێرەکانی کارکردن</span>
+            </h3>
+
+            <div>
+              <label class="block text-xs font-semibold mb-1 text-slate-700" id="lblGymAddressSetting">ناونیشانی هۆڵ (Location / Address)</label>
+              <input id="sAddress" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs" placeholder="سلێمانی - شەقامی بازنەیی مەلیک مەحمود...">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold mb-1 text-slate-700" id="lblGymWorkHoursSetting">کاتژمێرەکانی کارکردن (Working Hours)</label>
+              <input id="sWorkHours" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs" placeholder="شەممە تا پێنجشەممە: ٨:٠٠ بەیانی تا ١٢:٠٠ شەو...">
+            </div>
+          </div>
+
+          <!-- ژمارەی پەیوەندییە دینامیکییەکان (Dynamic Phones List) -->
+          <div class="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-xs text-slate-700 flex items-center gap-1.5">
+                <i data-lucide="phone-call" class="w-4 h-4 text-emerald-600"></i>
+                <span>ژمارەکانی پەیوەندی و مۆبایل (Dynamic Phones)</span>
+              </h3>
+              <button type="button" onclick="addPhoneRow()" class="px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-[11px] font-bold flex items-center gap-1 transition">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>+ زیادکردنی ژمارە</span>
+              </button>
+            </div>
+            <div id="dynamicPhonesContainer" class="space-y-2"></div>
+            <div>
+              <label class="block text-[11px] font-semibold mb-1 text-slate-500" id="lblGymWhatsAppSetting">ژمارەی واتسئەپ (WhatsApp) تایبەت بە کڕیاران</label>
+              <input id="sWhatsApp" class="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs font-mono" placeholder="0770xxxxxxx">
+            </div>
+          </div>
+
+          <!-- هەژمارەکانی سۆشیال میدیا لەگەڵ سویچی On/Off (Dynamic Social Accounts) -->
+          <div class="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-xs text-slate-700 flex items-center gap-1.5">
+                <i data-lucide="share-2" class="w-4 h-4 text-indigo-600"></i>
+                <span>تۆڕە کۆمەڵایەتییەکان لەگەڵ سویچی چالاککردن (Social Accounts)</span>
+              </h3>
+              <button type="button" onclick="addSocialRow()" class="px-2.5 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-lg text-[11px] font-bold flex items-center gap-1 transition">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>+ زیادکردنی هەژمار</span>
+              </button>
+            </div>
+            <div id="dynamicSocialsContainer" class="space-y-2.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-200 flex justify-end">
+        <button onclick="saveSettingsUI()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3 rounded-xl shadow-lg shadow-indigo-600/20 transition flex items-center gap-2 text-sm" id="btnSaveSettingsBottomText">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span>پاشەکەوتکردنی هەموو ڕێکخستنەکان لە Excel</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- جۆرەکانی بەشداریکردن -->
+    <div id="set-tab-subscriptions" class="hidden glass rounded-3xl p-6 shadow-sm space-y-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="font-bold text-lg" id="lblSubTypesTitle">جۆرەکانی بەشداریکردن</h2>
+          <p class="text-xs text-slate-500" id="lblSubTypesSub">ئەم بەشانە لە درۆپداونی زیادکردنی بەشداربووی نوێ بەکاردێن</p>
+        </div>
+        <button onclick="openSubTypeModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition">
+          <span id="btnNewSubTypeText">+ جۆری نوێ</span>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b">
+            <tr class="text-right text-slate-600">
+              <th class="p-3" id="thStCode">کۆد</th>
+              <th class="p-3" id="thStName">ناوی بەشداری</th>
+              <th class="p-3" id="thStDuration">ماوە (ڕۆژ)</th>
+              <th class="p-3" id="thStPrice">نرخی بنەڕەتی (IQD)</th>
+              <th class="p-3" id="thStDesc">وەسف</th>
+              <th class="p-3 text-center" id="thStAction">کردار</th>
+            </tr>
+          </thead>
+          <tbody id="subTypeRows" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- کتێبخانەی ڕاهێنانەکان بە لیستی درێژی ماسولکەکان -->
+    <div id="set-tab-exercises" class="hidden glass rounded-3xl p-6 shadow-sm space-y-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="font-bold text-lg" id="lblExerciseLibraryTitle">کتێبخانەی ڕاهێنانەکان (Exercise Library)</h2>
+          <p class="text-xs text-slate-500" id="lblExerciseLibrarySub">دروستکردنی ڕاهێنان بۆ بەستنەوەی ڕاستەوخۆ بە پلانەکان</p>
+        </div>
+        <button onclick="openExerciseModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition">
+          <span id="btnNewExerciseText">+ ڕاهێنانی نوێ</span>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b">
+            <tr class="text-right text-slate-600">
+              <th class="p-3" id="thExName">ناوی ڕاهێنان</th>
+              <th class="p-3" id="thExMuscle">بەشی ماسولکە</th>
+              <th class="p-3" id="thExSetsReps">کۆمەڵە / دووبارە</th>
+              <th class="p-3" id="thExVideo">ڤیدیۆ</th>
+              <th class="p-3 text-center" id="thExAction">کردار</th>
+            </tr>
+          </thead>
+          <tbody id="exerciseLibraryRows" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- داگرتن و باکئەپی داتاکان بە شێوازی دەستی و خۆکارانە -->
+    <div id="set-tab-backup" class="hidden glass rounded-3xl p-6 shadow-sm space-y-6 max-w-4xl">
+      <div>
+        <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+          <i data-lucide="database" class="w-5 h-5 text-indigo-600"></i>
+          <span id="lblBackupTitle">داگرتن و باکئەپی داتاکان (Export & Database Backup)</span>
+        </h2>
+        <p class="text-xs text-slate-500" id="lblBackupSub">داگرتنی ڕاستەوخۆی فایلی Excel یان ناردن و پاشەکەوتکردنی خۆکارانەی مانگانە و ساڵانە</p>
+      </div>
+
+      <!-- ١. داگرتنی ڕاستەوخۆ بە دەست (Manual Download) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="font-bold text-sm text-slate-700 flex items-center gap-2">
+          <i data-lucide="hard-drive-download" class="w-4 h-4 text-emerald-600"></i>
+          <span id="lblManualBackupTitle">داگرتنی دەستی (Direct Manual Downloads)</span>
+        </h3>
+        <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <a href="/api/download-db" download class="p-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 flex flex-col items-center justify-center text-center gap-2 font-bold text-xs transition">
+            <i data-lucide="sheet" class="w-6 h-6 text-emerald-600"></i>
+            <span id="btnDownloadDbText">داگرتنی فایلی Excel<br><span class="text-[10px] text-emerald-600 font-mono">(gym_database.xlsx)</span></span>
+          </a>
+          <button type="button" onclick="exportMembersExcel()" class="p-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-800 flex flex-col items-center justify-center text-center gap-2 font-bold text-xs transition">
+            <i data-lucide="users" class="w-6 h-6 text-indigo-600"></i>
+            <span id="btnExpMembersText">هەناردەی بەشداربووان<br><span class="text-[10px] text-indigo-600 font-mono">(Members .xlsx)</span></span>
+          </button>
+          <button type="button" onclick="exportFinancesExcel()" class="p-4 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-800 flex flex-col items-center justify-center text-center gap-2 font-bold text-xs transition">
+            <i data-lucide="receipt" class="w-6 h-6 text-rose-600"></i>
+            <span id="btnExpFinancesText">هەناردەی مەسروفات و داهات<br><span class="text-[10px] text-rose-600 font-mono">(Finances .xlsx)</span></span>
+          </button>
+          <button type="button" onclick="exportSalesExcel()" class="p-4 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 flex flex-col items-center justify-center text-center gap-2 font-bold text-xs transition">
+            <i data-lucide="shopping-cart" class="w-6 h-6 text-amber-600"></i>
+            <span id="btnExpSalesText">هەناردەی فرۆشتنی کاڵا<br><span class="text-[10px] text-amber-600 font-mono">(Sales .xlsx)</span></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ٢. ڕێکخستنی ناردنی خۆکارانە و ئاگادارکردنەوە (Automated Backup Settings) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="font-bold text-sm text-slate-700 flex items-center gap-2">
+          <i data-lucide="refresh-cw" class="w-4 h-4 text-indigo-600"></i>
+          <span id="lblAutoBackupTitle">ڕێکخستنی باکئەپی خۆکارانە (مانگانە / ساڵانە)</span>
+        </h3>
+        
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblAutoBackupFreq">شێوازی باکئەپ و هەناردەکردن:</label>
+            <select id="sAutoBackupFreq" class="w-full border rounded-xl p-3 text-xs font-bold bg-slate-50">
+              <option value="monthly" id="optBackupMonthly">مانگانە (لە کۆتایی هەر مانگێک هەناردە دەکرێت)</option>
+              <option value="yearly" id="optBackupYearly">ساڵانە (لە کۆتایی هەر ساڵێک باکئەپی تەواو دەکرێت)</option>
+              <option value="weekly" id="optBackupWeekly">هەفتانە (لە کۆتایی هەموو هەفتەیەک)</option>
+              <option value="manual" id="optBackupManual">تەنها بە دەست (Manual Only)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblAutoBackupNotify">ئاگادارکردنەوەی خۆکارانە (Auto-Prompt / Alert):</label>
+            <select id="sAutoBackupNotify" class="w-full border rounded-xl p-3 text-xs font-semibold bg-slate-50">
+              <option value="enabled" id="optNotifyEnabled">چالاکە — لەسەر شاشە بیرهێنانەوە نیشان بدە</option>
+              <option value="disabled" id="optNotifyDisabled">ناچالاکە</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 flex items-center justify-between text-xs">
+          <span class="text-indigo-900 font-medium" id="lblLastBackup">دواین باکئەپ و پاشەکەوتی فایلی Excel:</span>
+          <span id="sLastBackupDate" class="font-mono font-bold text-indigo-700">ئەمڕۆ (لەسەر سێرڤەر بەردەستە)</span>
+        </div>
+
+        <button type="button" onclick="saveAutoBackupSettings()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-sm transition">
+          <span id="btnSaveAutoBackupText">پاشەکەوتکردنی ڕێکخستنی باکئەپ</span>
+        </button>
+      </div>
+
+      <!-- ٣. بەستنەوە بە گووگڵ شیت و سێرڤەری ئۆنلاین (Google Sheets Cloud Database Connection) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-sm text-slate-700 flex items-center gap-2">
+            <i data-lucide="cloud-cog" class="w-4 h-4 text-emerald-600"></i>
+            <span id="lblCloudServerTitle">بەستنەوە بە Google Sheets (سێرڤەری پەبلیشی سەر ئینتەرنێت)</span>
+          </h3>
+          <span id="cloudStatusBadge" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600">پشکنینی دۆخ...</span>
+        </div>
+        <p class="text-xs text-slate-500 leading-relaxed" id="lblCloudServerDesc">
+          کاتێک سیستەم لەسەر ئینتەرنێت (وەکو Cloudflare Pages یان Vercel یان Web App) بڵاودەکەیتەوە، لێرە لینکی Google Apps Script Web App دابنێ بۆ ئەوەی داتاکان ڕاستەوخۆ لەناو Google Sheet پاشەکەوت ببن.
+        </p>
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-slate-700" id="lblCloudApiUrl">لینکی Web App URL (کۆتاییەکەی /exec بێت):</label>
+          <div class="flex gap-2">
+            <input type="url" id="sCloudApiUrl" placeholder="https://script.google.com/macros/s/.../exec" dir="ltr" class="flex-1 border rounded-xl p-3 text-xs font-mono font-semibold bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <button type="button" onclick="testAndSaveCloudApi()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm transition flex items-center gap-1.5 whitespace-nowrap">
+              <i data-lucide="save" class="w-3.5 h-3.5"></i>
+              <span id="btnSaveCloudApi">پاشەکەوت و تاقیکردنەوە</span>
+            </button>
+            <button type="button" onclick="resetToLocalApi()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-2.5 rounded-xl text-xs shadow-sm transition whitespace-nowrap" title="گەڕاندنەوە بۆ سێرڤەری ناوخۆیی">
+              ڕیسێت
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+</div>
+
+<!-- مۆداڵی گشتی (Universal Modal) -->
+<div id="modal" class="fixed inset-0 bg-slate-950/60 hidden items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+    <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
+      <h2 id="modalTitle" class="font-bold text-xl text-slate-800"></h2>
+      <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 grid place-items-center transition">✕</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- مۆداڵی چێک ئینی خێرا و ئامادەبوون (Quick Check-in Dialog Box) -->
+<div id="quickCheckinModal" class="fixed inset-0 bg-slate-950/60 hidden items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-3xl p-6 w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
+    <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 grid place-items-center shadow-sm">
+          <i data-lucide="calendar-check" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h2 class="font-extrabold text-xl text-slate-800" id="qcModalTitle">ئامادەبوونی بەشداربووان (Check-in & Check-out)</h2>
+          <p class="text-xs text-slate-400" id="qcModalSubtitle">چێک ئین و چێک ئاوتی دەستی بۆ بەشداربووانی هۆڵ بە یەک کلیک</p>
+        </div>
+      </div>
+      <button onclick="closeQuickCheckinModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 grid place-items-center transition">✕</button>
+    </div>
+
+    <!-- گەڕان و فلتەر -->
+    <div class="space-y-3 mb-4">
+      <div class="relative">
+        <input id="qcSearchInput" oninput="renderQuickCheckinList()" placeholder="گەڕان بەپێی ناو، کۆد، یان مۆبایل..." class="w-full border border-slate-200 rounded-2xl p-3 pr-10 pl-4 text-sm focus:ring-2 focus:ring-emerald-500">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2"></i>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="setQcFilter('all')" id="qcFilterBtn-all" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-sm transition">هەموو بەشداربووان</button>
+        <button onclick="setQcFilter('inside')" id="qcFilterBtn-inside" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">🟢 لە هۆڵدان</button>
+        <button onclick="setQcFilter('outside')" id="qcFilterBtn-outside" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">⚪ لە دەرەوەن</button>
+      </div>
+    </div>
+
+    <!-- لیستی بەشداربووان -->
+    <div id="qcMembersList" class="flex-1 overflow-y-auto space-y-2.5 pr-1 max-h-[50vh]"></div>
+
+    <div class="pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
+      <span class="text-slate-500 font-semibold" id="qcSummaryCount">0 بەشداربوو</span>
+      <button onclick="closeQuickCheckinModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 font-bold rounded-xl text-slate-700 transition" id="btnCloseQcModal">داخستن</button>
+    </div>
+  </div>
+</div>
+
+<!-- مۆداڵی پێشکەوتووی هەڵبژاردنی خواردن بۆ ژەمەکان (Food Picker Modal) - شوێنگرەوەی prompt -->
+<div id="foodPickerModal" class="fixed inset-0 bg-slate-950/60 hidden items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+    <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 grid place-items-center shadow-sm">
+          <i data-lucide="utensils" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h2 class="font-extrabold text-lg text-slate-800" id="fpModalTitle">زیادکردنی خواردن بۆ ژەم</h2>
+          <p class="text-xs text-slate-400" id="fpModalSubtitle">لە کتێبخانەی خۆراکەکان هەڵبژێرە یان خواردنی تایبەت بنووسە</p>
+        </div>
+      </div>
+      <button onclick="closeFoodPickerModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 grid place-items-center transition">✕</button>
+    </div>
+
+    <!-- تابی کتێبخانە بەرامبەر بە دەست -->
+    <div class="flex gap-2 mb-4 p-1 bg-slate-100 rounded-2xl">
+      <button type="button" onclick="switchFoodPickerTab('library')" id="fpTabBtn-library" class="flex-1 py-2 text-xs font-bold rounded-xl bg-white text-emerald-700 shadow-sm transition">
+        🥗 لە کتێبخانەی خۆراکەکان
+      </button>
+      <button type="button" onclick="switchFoodPickerTab('custom')" id="fpTabBtn-custom" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition">
+        ✏️ خواردنی تایبەت بە دەست
+      </button>
+    </div>
+
+    <!-- بەشی کتێبخانەی خۆراکەکان -->
+    <div id="fpLibrarySection" class="flex-1 overflow-hidden flex flex-col space-y-3">
+      <div class="relative">
+        <input id="fpSearchInput" oninput="renderFoodPickerList()" placeholder="گەڕان لە خواردنەکان (مریشک، برنج، هێلکە، شۆفان...)..." class="w-full border border-slate-200 rounded-2xl p-2.5 pr-10 pl-4 text-xs focus:ring-2 focus:ring-emerald-500">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2"></i>
+      </div>
+
+      <div class="flex flex-wrap gap-1.5" id="fpCategoryChips">
+        <button type="button" onclick="filterFoodPickerCat('all')" class="fp-cat-chip px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 text-white">هەمووی</button>
+        <button type="button" onclick="filterFoodPickerCat('پرۆتین')" class="fp-cat-chip px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600">پرۆتین</button>
+        <button type="button" onclick="filterFoodPickerCat('کاربۆهیدرات')" class="fp-cat-chip px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600">کاربۆهیدرات</button>
+        <button type="button" onclick="filterFoodPickerCat('چەوری')" class="fp-cat-chip px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600">چەوری تەندروست</button>
+      </div>
+
+      <div id="fpFoodsList" class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[30vh]"></div>
+    </div>
+
+    <!-- بەشی پێکهاتەی هەڵبژێردراو و بڕ / خواردنی تایبەت -->
+    <div class="mt-4 pt-3 border-t border-slate-100 space-y-3">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div class="col-span-2">
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">ناوی خواردن *</label>
+          <input id="fpSelectedName" required placeholder="ناوی خواردنەکە..." class="w-full border rounded-xl p-2 text-xs font-bold">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">بڕ / پێوانە</label>
+          <input id="fpSelectedAmount" placeholder="١٥٠ گرام، ٢ دانە..." class="w-full border rounded-xl p-2 text-xs">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-amber-700 mb-1">کالۆری (kcal) *</label>
+          <input id="fpSelectedCalories" type="number" placeholder="150" class="w-full border border-amber-200 rounded-xl p-2 text-xs font-mono font-bold">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-indigo-700 mb-1">پرۆتین (گرام)</label>
+          <input id="fpSelectedProtein" placeholder="25g" class="w-full border border-indigo-200 rounded-xl p-2 text-xs font-mono">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeFoodPickerModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">پاشگەزبوونەوە</button>
+        <button type="button" onclick="confirmAddFoodToMeal()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1.5">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>زیادکردن بۆ ئەم ژەمە</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- مۆداڵی زیادکردنی کارتی پێوەری نوێ بۆ ماکرۆکانی پلانی خۆراک (Add Macro Card Modal) -->
+<div id="addMacroCardModal" class="fixed inset-0 bg-slate-950/60 hidden items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl">
+    <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 grid place-items-center shadow-sm">
+          <i data-lucide="plus-circle" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h2 class="font-extrabold text-lg text-slate-800" id="amcModalTitle">زیادکردنی کارتی پێوەری نوێ</h2>
+          <p class="text-xs text-slate-400" id="amcModalSubtitle">پێوەری دڵخوازی ڕۆژانە دابنێ وەکو ئاو، فایبەر، سۆدیۆم و هتد</p>
+        </div>
+      </div>
+      <button onclick="closeAddMacroCardModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 grid place-items-center transition">✕</button>
+    </div>
+
+    <!-- پێشنیازە ئامادەکراوەکان (Quick Presets) -->
+    <div class="space-y-3 mb-4">
+      <span class="block text-xs font-bold text-slate-700">پێشنیازە خێراکان (کلیک بکە بۆ هەڵبژاردن):</span>
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" onclick="fillMacroPreset('ئاوی ڕۆژانە (Water)', '3.5', 'L', 'droplets', 'cyan')" class="p-2.5 rounded-xl border border-cyan-200 bg-cyan-50/60 hover:bg-cyan-100/70 text-right text-xs font-bold text-cyan-900 transition flex items-center justify-between">
+          <span>💧 ئاوی ڕۆژانە</span>
+          <span class="text-[10px] text-cyan-700">3.5 L</span>
+        </button>
+        <button type="button" onclick="fillMacroPreset('فایبەر / ڕیشاڵ (Fiber)', '35', 'g', 'wheat', 'amber')" class="p-2.5 rounded-xl border border-amber-200 bg-amber-50/60 hover:bg-amber-100/70 text-right text-xs font-bold text-amber-900 transition flex items-center justify-between">
+          <span>🌾 فایبەر / ڕیشاڵ</span>
+          <span class="text-[10px] text-amber-700">35 g</span>
+        </button>
+        <button type="button" onclick="fillMacroPreset('سۆدیۆم / خوێ (Sodium)', '2300', 'mg', 'sparkles', 'slate')" class="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-right text-xs font-bold text-slate-900 transition flex items-center justify-between">
+          <span>🧂 سۆدیۆم / خوێ</span>
+          <span class="text-[10px] text-slate-600">2300 mg</span>
+        </button>
+        <button type="button" onclick="fillMacroPreset('شەکر (Sugar)', '25', 'g', 'candy', 'rose')" class="p-2.5 rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100/70 text-right text-xs font-bold text-rose-900 transition flex items-center justify-between">
+          <span>🍬 زۆرترین شەکر</span>
+          <span class="text-[10px] text-rose-700">25 g</span>
+        </button>
+        <button type="button" onclick="fillMacroPreset('کافایین (Caffeine)', '200', 'mg', 'coffee', 'orange')" class="p-2.5 rounded-xl border border-orange-200 bg-orange-50/60 hover:bg-orange-100/70 text-right text-xs font-bold text-orange-900 transition flex items-center justify-between">
+          <span>☕ کافایین</span>
+          <span class="text-[10px] text-orange-700">200 mg</span>
+        </button>
+        <button type="button" onclick="fillMacroPreset('سەوزە و میوە (Veggies)', '5', 'بەش', 'apple', 'emerald')" class="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/70 text-right text-xs font-bold text-emerald-900 transition flex items-center justify-between">
+          <span>🥦 سەوزە و میوە</span>
+          <span class="text-[10px] text-emerald-700">5 بەش</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- فۆڕمی تایبەتکردنی کارتی پێوەر -->
+    <div class="space-y-3 pt-3 border-t border-slate-100">
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">ناوی پێوەرەکە *</label>
+        <input id="amcName" required placeholder="بۆ نموونە: ئاوی ڕۆژانە، فایبەر، ڤیتامین سی..." class="w-full border rounded-xl p-2.5 text-xs font-bold">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">بڕ / ئامانج *</label>
+          <input id="amcTarget" required placeholder="3.5 یان 30" class="w-full border rounded-xl p-2.5 text-xs font-mono font-bold">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">یەکە (Unit)</label>
+          <input id="amcUnit" placeholder="L, g, mg, سکۆپ..." class="w-full border rounded-xl p-2.5 text-xs">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">ڕەنگی کارت</label>
+        <select id="amcColor" class="w-full border rounded-xl p-2.5 text-xs font-bold">
+          <option value="cyan">شینی ئاسمانی (Cyan / Water)</option>
+          <option value="emerald">سەوز (Emerald / Healthy)</option>
+          <option value="purple">مۆر (Purple / Nutrition)</option>
+          <option value="amber">زەرد / پڕتەقاڵی (Amber / Energy)</option>
+          <option value="rose">سوور (Rose / Limit Target)</option>
+          <option value="slate">ڕەساسی مۆدێرن (Slate)</option>
+        </select>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3">
+        <button type="button" onclick="closeAddMacroCardModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">پاشگەزبوونەوە</button>
+        <button type="button" onclick="confirmAddMacroCard()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition">
+          + دروستکردنی کارت
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>
