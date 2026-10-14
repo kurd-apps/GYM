@@ -9,7 +9,7 @@
  */
 const GYM_CONFIG = {
   // بەستەری Google Apps Script Web App:
-  API_URL: "https://script.google.com/macros/s/AKfycbz_1UYFwqWKfD10nwK-9kIrB1-PkJ1N2vH_KDti0hFO-nDI/exec"
+  API_URL: "https://script.google.com/macros/s/AKfycby1nXz4stCP-j58WtCHbEmyek4aIvb_Vy-s5DiwTuvlh2I5W1und9F8ez4Gwv61Hl2u9A/exec"
 };
 
 // خوێندنەوەی بەستەر لە پاشەکەوتکراوی مۆبایل (localStorage) یان پارامیتەری URL (?api=...)
